@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Default game/BepInEx reference locations for this development machine.
+    Override either property from the environment (CI, another platform, a
+    non-default Steam library) by setting the env var of the same name before
+    invoking `dotnet build`.
+  -->
+  <PropertyGroup Condition=" '$(GAME_MANAGED)' == '' ">
+    <GAME_MANAGED>/home/heyblack/dev/HFF/Human_Fall_Flat/dlls</GAME_MANAGED>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(BEPINEX_CORE)' == '' ">
+    <BEPINEX_CORE>/home/heyblack/dev/TwilightCup/tools/bepinex-core</BEPINEX_CORE>
+  </PropertyGroup>
+
+</Project>

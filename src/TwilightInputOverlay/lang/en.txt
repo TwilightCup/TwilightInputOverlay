@@ -1,0 +1,38 @@
+__LANG_NAME__:English
+
+# ===== Panel general =====
+TAB_TITLE:Input Overlay
+PANEL_TITLE:TwilightInputOverlay
+PANEL_SAVE:Save
+PANEL_CLOSE:Close
+PANEL_FOOTER:Changes apply immediately and are saved on close.
+
+# ===== General =====
+PANEL_GENERAL:General
+SETTINGS_PANEL_KEY:Settings Panel Key
+PANEL_PRESS_KEY:Press a key...
+SETTINGS_LANGUAGE:Language
+PANEL_RELOAD_LANGUAGE:Reload language files
+PANEL_LANG_SELECT_HINT:▼
+
+# ===== HUD =====
+PANEL_HUD:HUD
+SETTINGS_SHOW_HUD:Show HUD
+SETTINGS_SHOW_KEY_TEXT:Show key text
+PANEL_OFFSET_X:X Offset
+PANEL_OFFSET_Y:Y Offset
+PANEL_SCALE:Scale
+
+# ===== Grid =====
+PANEL_GRID:Key Grid
+SETTINGS_SPACING:Key Spacing
+SETTINGS_CORNER_RADIUS:Corner Radius
+
+# ===== Style =====
+PANEL_STYLE:Style
+PANEL_STATE_IDLE:Idle
+PANEL_STATE_PRESSED:Pressed
+PANEL_COLOR_TEXT:Text
+PANEL_COLOR_BORDER:Border
+PANEL_COLOR_FILL:Fill
+PANEL_COLOR_HEX:hex
