@@ -23,6 +23,10 @@ PANEL_OFFSET_X:X偏移
 PANEL_OFFSET_Y:Y偏移
 PANEL_SCALE:缩放
 
+# ===== 动画 =====
+PANEL_ANIMATION:动画
+SETTINGS_FADE_SPEED:淡入淡出速度
+
 # ===== 按键网格 =====
 PANEL_GRID:按键网格
 SETTINGS_SPACING:按键间距

@@ -5,6 +5,8 @@
 - Release Date: Unreleased
 - Highlights: Placeholder
 - Details:
+  - Idle/pressed key transitions now fade smoothly (text, border, fill).
+  - New "Fade Speed" slider in the settings panel to control the transition speed.
 - Contributors: Placeholder
 
 ## 1.0.0

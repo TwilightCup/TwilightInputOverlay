@@ -54,6 +54,9 @@ namespace TwilightInputOverlay
         public float Spacing = 0f;
         public float CornerRadius = 0f;
 
+        // Idle/pressed transition animation speed. Higher fades faster; 0 disables.
+        public float FadeSpeed = 8f;
+
         // Standalone-panel keybind; not shown when integrated into HSRTimer.
         public KeyCode PanelKey = KeyCode.Home;
 
@@ -92,6 +95,7 @@ namespace TwilightInputOverlay
                     case "scale": Scale = Mathf.Max(0.1f, ParseFloat(value, Scale)); break;
                     case "spacing": Spacing = Mathf.Max(0f, ParseFloat(value, Spacing)); break;
                     case "corner_radius": CornerRadius = Mathf.Max(0f, ParseFloat(value, CornerRadius)); break;
+                    case "fade_speed": FadeSpeed = Mathf.Max(0f, ParseFloat(value, FadeSpeed)); break;
                     case "panel_key": PanelKey = ParseKeyCode(value, PanelKey); break;
                     case "language": CurrentLang = value; break;
                     default:
@@ -136,6 +140,7 @@ namespace TwilightInputOverlay
                 ["scale"] = Scale.ToString("0.###", CultureInfo.InvariantCulture),
                 ["spacing"] = Spacing.ToString("0.###", CultureInfo.InvariantCulture),
                 ["corner_radius"] = CornerRadius.ToString("0.###", CultureInfo.InvariantCulture),
+                ["fade_speed"] = FadeSpeed.ToString("0.###", CultureInfo.InvariantCulture),
                 ["panel_key"] = PanelKey.ToString(),
                 ["language"] = CurrentLang,
             };

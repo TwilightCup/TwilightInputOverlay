@@ -23,6 +23,10 @@ PANEL_OFFSET_X:X Offset
 PANEL_OFFSET_Y:Y Offset
 PANEL_SCALE:Scale
 
+# ===== Animation =====
+PANEL_ANIMATION:Animation
+SETTINGS_FADE_SPEED:Fade Speed
+
 # ===== Grid =====
 PANEL_GRID:Key Grid
 SETTINGS_SPACING:Key Spacing

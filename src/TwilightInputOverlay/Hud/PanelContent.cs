@@ -48,6 +48,9 @@ namespace TwilightInputOverlay
             s.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), s.OffsetY, "0.##");
             s.Scale = Mathf.Max(0.1f, SliderRow(loc.Get("PANEL_SCALE"), s.Scale, 0.1f, 3f));
 
+            Section(loc.Get("PANEL_ANIMATION"));
+            s.FadeSpeed = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_FADE_SPEED"), s.FadeSpeed, 0f, 20f));
+
             Section(loc.Get("PANEL_GRID"));
             s.Spacing = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_SPACING"), s.Spacing, 0f, 24f));
             s.CornerRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_CORNER_RADIUS"), s.CornerRadius, 0f, 24f));
