@@ -6,8 +6,8 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// The shared IMGUI content for the input-overlay settings. It is drawn both
-    /// by the standalone settings panel and by the HSRTimer-integrated tab.
-    /// When <c>integrated</c> is true, the controls HSRTimer already owns —
+    /// by the standalone settings panel and by the HSRTimer/TwilightTimer-integrated tab.
+    /// When <c>integrated</c> is true, the controls the timer panel already owns —
     /// the settings-panel keybind and the language selector — are omitted.
     /// All edits write directly into <see cref="ConfigService.Settings"/> so
     /// they apply live.
@@ -177,7 +177,7 @@ namespace TwilightInputOverlay
                 || k == KeyCode.LeftCommand || k == KeyCode.RightCommand;
         }
 
-        // Single-select language picker, same control as HSRTimer's.
+        // Single-select language picker, same control as HSRTimer's/TwilightTimer's.
         private static void DrawLanguageSelector(ConfigService cfg, LocalizationService loc)
         {
             if (_langCodes == null) RefreshLanguageList();

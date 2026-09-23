@@ -6,13 +6,15 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// BepInEx plugin entry point. Loads config + localization, spawns the
-    /// persistent input-overlay HUD, and either integrates into HSRTimer's
-    /// settings panel (when HSRTimer is present) or spawns the standalone
-    /// IMGUI settings panel. HSRTimer is a soft dependency; without it the
-    /// plugin still works and provides its own panel.
+    /// persistent input-overlay HUD, and either integrates into HSRTimer's or
+    /// TwilightTimer's settings panel (when one of those timers is present) or
+    /// spawns the standalone IMGUI settings panel. Both timers are soft
+    /// dependencies; without them the plugin still works and provides its own
+    /// panel.
     /// </summary>
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     [BepInDependency("HSRTimer", BepInEx.BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("TwilightTimer", BepInEx.BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         internal static new ManualLogSource Logger;
@@ -33,11 +35,11 @@ namespace TwilightInputOverlay
             Object.DontDestroyOnLoad(hudGo);
             hudGo.AddComponent<InputHud>();
 
-            // 3. Optional HSRTimer integration. This is pure reflection, so the
-            //    plugin loads fine when HSRTimer is absent. When integrated, the
-            //    config UI lives in HSRTimer's settings panel and the standalone
-            //    panel is not spawned.
-            bool integrated = HsrtimerIntegration.TryRegister(this);
+            // 3. Optional HSRTimer/TwilightTimer integration. This is pure
+            //    reflection, so the plugin loads fine when neither timer is
+            //    present. When integrated, the config UI lives in that timer's
+            //    settings panel and the standalone panel is not spawned.
+            bool integrated = TimerSettingsIntegration.TryRegister(this);
             if (!integrated)
             {
                 var panelGo = new GameObject("TwilightInputOverlay.Panel");
@@ -49,7 +51,7 @@ namespace TwilightInputOverlay
         private void OnDestroy()
         {
             // Avoid a stale delegate if the plugin is ever unloaded.
-            HsrtimerIntegration.Unsubscribe();
+            TimerSettingsIntegration.Unsubscribe();
         }
     }
 }

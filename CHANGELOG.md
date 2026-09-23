@@ -7,6 +7,7 @@
 - **Details**:
   - Idle/pressed key transitions now fade smoothly (text, border, fill).
   - New "Fade Speed" slider in the settings panel to control the transition speed.
+  - Settings panel also integrates into TwilightTimer (the HSRTimer fork) when HSRTimer is not available.
 - **Contributors**: Placeholder
 
 ## 1.0.0

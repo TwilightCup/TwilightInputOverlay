@@ -3,10 +3,12 @@ using UnityEngine;
 namespace TwilightInputOverlay
 {
     /// <summary>
-    /// The standalone IMGUI settings panel used when HSRTimer is not present.
-    /// Toggled by the configurable panel key (default Home). It draws the shared
+    /// The standalone IMGUI settings panel used when neither HSRTimer nor
+    /// TwilightTimer is available for integration. Toggled by the configurable
+    /// panel key (default Home). It draws the shared
     /// <see cref="PanelContent"/> and adds its own save/close/footer controls.
-    /// When integrated into HSRTimer, this component is not created.
+    /// When integrated into a timer's settings panel, this component is not
+    /// created.
     /// </summary>
     public class SettingsPanel : MonoBehaviour
     {

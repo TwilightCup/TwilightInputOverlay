@@ -32,9 +32,9 @@ A [BepInEx 5](https://docs.bepinex.dev/) plugin for **Human: Fall Flat** that ad
 3. Launch the game. The overlay appears at the bottom-left of the screen.
 4. Press `Home` to open the settings panel.
 
-## HSRTimer integration
+## Timer settings-panel integration
 
-If HSRTimer is installed, TwilightInputOverlay automatically integrates into HSRTimer's settings panel as an **Input Overlay** tab; in that case the standalone `Home`-key panel is not created, so open HSRTimer's settings panel to configure the overlay. Without HSRTimer, the plugin still works normally and provides its own standalone panel.
+If HSRTimer or TwilightTimer (the HSRTimer fork) is installed, TwilightInputOverlay automatically integrates into that timer's settings panel as an **Input Overlay** tab; in that case the standalone `Home`-key panel is not created, so open the timer's settings panel to configure the overlay. HSRTimer is preferred when both are present. Without either timer, the plugin still works normally and provides its own standalone panel.
 
 ## Usage
 

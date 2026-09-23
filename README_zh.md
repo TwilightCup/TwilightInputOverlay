@@ -32,9 +32,9 @@
 3. 启动游戏，左下角即会显示输入 HUD。
 4. 按 `Home` 键打开设置面板。
 
-## HSRTimer 集成
+## 计时器设置面板集成
 
-如果安装了 HSRTimer，TwilightInputOverlay 会自动集成到 HSRTimer 的设置面板中，作为一个 **输入显示** 标签页；此时不会创建按 `Home` 键打开的独立面板，请打开 HSRTimer 的设置面板进行配置。没有 HSRTimer 时，插件也能正常工作，并提供自己的独立面板。
+如果安装了 HSRTimer 或 TwilightTimer（HSRTimer 的 fork），TwilightInputOverlay 会自动集成到对应计时器的设置面板中，作为一个 **输入显示** 标签页；此时不会创建按 `Home` 键打开的独立面板，请打开对应计时器的设置面板进行配置。两者同时存在时优先接入 HSRTimer。没有这两个计时器时，插件也能正常工作，并提供自己的独立面板。
 
 ## 使用指南
 

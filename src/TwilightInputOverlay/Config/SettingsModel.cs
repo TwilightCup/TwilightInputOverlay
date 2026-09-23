@@ -57,7 +57,7 @@ namespace TwilightInputOverlay
         // Idle/pressed transition animation speed. Higher fades faster; 0 disables.
         public float FadeSpeed = 8f;
 
-        // Standalone-panel keybind; not shown when integrated into HSRTimer.
+        // Standalone-panel keybind; not shown when integrated into a timer's panel.
         public KeyCode PanelKey = KeyCode.Home;
 
         public string CurrentLang = "en";

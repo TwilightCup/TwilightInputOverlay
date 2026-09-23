@@ -7,14 +7,14 @@ using BepInEx;
 namespace TwilightInputOverlay
 {
     /// <summary>
-    /// Public static bridge that the runtime-emitted HSRTimer tab proxy
+    /// Public static bridge that the runtime-emitted timer settings tab proxy
     /// delegates to. Keeping this public is required: the proxy lives in a
     /// separate dynamic assembly, so it may only call public members of this
     /// plugin's assembly. The bridge also implements the
-    /// ILocalizableSettingsPanelTab shape so the tab follows HSRTimer's language
-    /// selection.
+    /// ILocalizableSettingsPanelTab shape so the tab follows the host timer's
+    /// language selection.
     /// </summary>
-    public static class HsrtimerTabBridge
+    public static class TimerSettingsTabBridge
     {
         public static string Title()
         {
@@ -25,7 +25,7 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer tab Title failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: timer settings tab Title failed: {ex.Message}");
                 return "Input Overlay";
             }
         }
@@ -38,7 +38,7 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer tab Draw failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: timer settings tab Draw failed: {ex.Message}");
             }
         }
 
@@ -58,7 +58,7 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer tab SupportedLanguages failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: timer settings tab SupportedLanguages failed: {ex.Message}");
                 result.Add("en");
             }
             return result;
@@ -75,14 +75,14 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer tab SetLanguage failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: timer settings tab SetLanguage failed: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Called when HSRTimer raises <c>SettingsPanelTabRegistry.SettingsSaved</c>
-        /// (R9.3), so this plugin's config is persisted at the same moments
-        /// HSRTimer saves its own config.
+        /// Called when the host timer raises <c>SettingsPanelTabRegistry.SettingsSaved</c>
+        /// (R9.3), so this plugin's config is persisted at the same moments the
+        /// host timer saves its own config.
         /// </summary>
         public static void SaveConfig()
         {
@@ -93,22 +93,47 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer SettingsSaved handler failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: timer SettingsSaved handler failed: {ex.Message}");
             }
         }
     }
 
     /// <summary>
-    /// Optional HSRTimer settings-panel integration implemented purely by
-    /// reflection: a small runtime-generated proxy implementing HSRTimer's
+    /// Optional timer settings-panel integration implemented purely by
+    /// reflection. It supports both HSRTimer and TwilightTimer (the HSRTimer
+    /// fork): a small runtime-generated proxy implementing the host timer's
     /// ISettingsPanelTab (and ILocalizableSettingsPanelTab) is registered into
-    /// HSRTimer.SettingsPanelTabRegistry. The proxy only calls public static
-    /// methods on <see cref="HsrtimerTabBridge"/>, mirroring the pattern used by
-    /// the proven TrueFirstPerson integration. When HSRTimer is absent this
-    /// class is a no-op and the plugin uses its own standalone settings panel.
+    /// the host timer's SettingsPanelTabRegistry. The proxy only calls public
+    /// static methods on <see cref="TimerSettingsTabBridge"/>, mirroring the
+    /// pattern used by the proven TrueFirstPerson integration. When neither
+    /// timer is present this class is a no-op and the plugin uses its own
+    /// standalone settings panel. When both timers are present, HSRTimer is
+    /// tried first so existing installations keep their current behavior.
     /// </summary>
-    internal static class HsrtimerIntegration
+    internal static class TimerSettingsIntegration
     {
+        private readonly struct TimerPanelApi
+        {
+            public TimerPanelApi(string displayName, string ns)
+            {
+                DisplayName = displayName;
+                InterfaceTypeName = ns + ".ISettingsPanelTab, " + ns;
+                LocalizableTypeName = ns + ".ILocalizableSettingsPanelTab, " + ns;
+                RegistryTypeName = ns + ".SettingsPanelTabRegistry, " + ns;
+            }
+
+            public string DisplayName { get; }
+            public string InterfaceTypeName { get; }
+            public string LocalizableTypeName { get; }
+            public string RegistryTypeName { get; }
+        }
+
+        private static readonly TimerPanelApi[] SupportedTimers =
+        {
+            new TimerPanelApi("HSRTimer", "HSRTimer"),
+            new TimerPanelApi("TwilightTimer", "TwilightTimer"),
+        };
+
         private static bool _tried;
         private static bool _enabled;
         private static object _registry;
@@ -122,14 +147,26 @@ namespace TwilightInputOverlay
             if (_tried) return _enabled;
             _tried = true;
 
+            foreach (var api in SupportedTimers)
+            {
+                if (TryRegister(owner, api))
+                    return true;
+            }
+
+            Plugin.Logger.LogInfo("TwilightInputOverlay: could not register with HSRTimer/TwilightTimer settings panel; standalone settings panel stays available.");
+            return false;
+        }
+
+        private static bool TryRegister(BaseUnityPlugin owner, TimerPanelApi api)
+        {
             try
             {
-                var interfaceType = Type.GetType("HSRTimer.ISettingsPanelTab, HSRTimer");
-                var localizableType = Type.GetType("HSRTimer.ILocalizableSettingsPanelTab, HSRTimer");
-                var registryType = Type.GetType("HSRTimer.SettingsPanelTabRegistry, HSRTimer");
+                var interfaceType = Type.GetType(api.InterfaceTypeName);
+                var localizableType = Type.GetType(api.LocalizableTypeName);
+                var registryType = Type.GetType(api.RegistryTypeName);
                 if (interfaceType == null || registryType == null)
                 {
-                    Plugin.Logger.LogInfo("TwilightInputOverlay: HSRTimer settings-panel tab API not found; standalone settings panel stays available.");
+                    Plugin.Logger.LogInfo($"TwilightInputOverlay: {api.DisplayName} settings-panel tab API not found; checking next timer.");
                     return false;
                 }
 
@@ -137,14 +174,14 @@ namespace TwilightInputOverlay
                 var registry = instanceProp != null ? instanceProp.GetValue(null, null) : null;
                 if (registry == null)
                 {
-                    Plugin.Logger.LogWarning("TwilightInputOverlay: HSRTimer registry not available; standalone panel stays available.");
+                    Plugin.Logger.LogWarning($"TwilightInputOverlay: {api.DisplayName} registry not available; checking next timer.");
                     return false;
                 }
 
                 var register = registryType.GetMethod("Register", new[] { typeof(string), interfaceType });
                 if (register == null)
                 {
-                    Plugin.Logger.LogWarning("TwilightInputOverlay: HSRTimer.SettingsPanelTabRegistry.Register(string, ISettingsPanelTab) not found.");
+                    Plugin.Logger.LogWarning($"TwilightInputOverlay: {api.DisplayName}.SettingsPanelTabRegistry.Register(string, ISettingsPanelTab) not found.");
                     return false;
                 }
 
@@ -163,46 +200,46 @@ namespace TwilightInputOverlay
                 if (result is bool ok && ok)
                 {
                     _enabled = true;
-                    SubscribeToSettingsSaved(registryType, registry);
-                    Plugin.Logger.LogInfo("TwilightInputOverlay: settings tab registered in HSRTimer settings panel.");
+                    SubscribeToSettingsSaved(api, registryType, registry);
+                    Plugin.Logger.LogInfo($"TwilightInputOverlay: settings tab registered in {api.DisplayName} settings panel.");
                     return true;
                 }
 
-                Plugin.Logger.LogWarning("TwilightInputOverlay: HSRTimer rejected settings tab registration (duplicate or invalid plugin GUID?).");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: {api.DisplayName} rejected settings tab registration (duplicate or invalid plugin GUID?).");
                 return false;
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: HSRTimer settings tab registration failed: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: {api.DisplayName} settings tab registration failed: {ex.Message}");
                 return false;
             }
         }
 
-        private static void SubscribeToSettingsSaved(Type registryType, object registry)
+        private static void SubscribeToSettingsSaved(TimerPanelApi api, Type registryType, object registry)
         {
             try
             {
                 var ev = registryType.GetEvent("SettingsSaved", BindingFlags.Public | BindingFlags.Instance);
                 if (ev == null)
                 {
-                    Plugin.Logger.LogWarning("TwilightInputOverlay: HSRTimer SettingsSaved event not found; config will not auto-save from HSRTimer.");
+                    Plugin.Logger.LogWarning($"TwilightInputOverlay: {api.DisplayName} SettingsSaved event not found; config will not auto-save from timer panel.");
                     return;
                 }
 
-                var handler = new Action(HsrtimerTabBridge.SaveConfig);
+                var handler = new Action(TimerSettingsTabBridge.SaveConfig);
                 ev.AddEventHandler(registry, handler);
                 _settingsSavedEvent = ev;
                 _registry = registry;
                 _settingsSavedHandler = handler;
-                Plugin.Logger.LogInfo("TwilightInputOverlay: subscribed to HSRTimer SettingsSaved event.");
+                Plugin.Logger.LogInfo($"TwilightInputOverlay: subscribed to {api.DisplayName} SettingsSaved event.");
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to subscribe to HSRTimer SettingsSaved: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to subscribe to {api.DisplayName} SettingsSaved: {ex.Message}");
             }
         }
 
-        /// <summary>Unsubscribe from HSRTimer's SettingsSaved event when this plugin unloads.</summary>
+        /// <summary>Unsubscribe from the host timer's SettingsSaved event when this plugin unloads.</summary>
         public static void Unsubscribe()
         {
             try
@@ -210,12 +247,12 @@ namespace TwilightInputOverlay
                 if (_settingsSavedEvent != null && _registry != null && _settingsSavedHandler != null)
                 {
                     _settingsSavedEvent.RemoveEventHandler(_registry, _settingsSavedHandler);
-                    Plugin.Logger.LogInfo("TwilightInputOverlay: unsubscribed from HSRTimer SettingsSaved event.");
+                    Plugin.Logger.LogInfo("TwilightInputOverlay: unsubscribed from timer SettingsSaved event.");
                 }
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to unsubscribe from HSRTimer SettingsSaved: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to unsubscribe from timer SettingsSaved: {ex.Message}");
             }
             finally
             {
@@ -260,7 +297,7 @@ namespace TwilightInputOverlay
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to build HSRTimer tab proxy: {ex.Message}");
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: failed to build timer settings tab proxy: {ex.Message}");
                 return null;
             }
         }
@@ -280,19 +317,19 @@ namespace TwilightInputOverlay
             var il = method.GetILGenerator();
             if (mi.Name == "get_Title")
             {
-                var bridge = typeof(HsrtimerTabBridge).GetMethod(
+                var bridge = typeof(TimerSettingsTabBridge).GetMethod(
                     "Title", BindingFlags.Public | BindingFlags.Static);
                 il.Emit(OpCodes.Call, bridge);
             }
             else if (mi.Name == "get_SupportedLanguages")
             {
-                var bridge = typeof(HsrtimerTabBridge).GetMethod(
+                var bridge = typeof(TimerSettingsTabBridge).GetMethod(
                     "SupportedLanguages", BindingFlags.Public | BindingFlags.Static);
                 il.Emit(OpCodes.Call, bridge);
             }
             else if (mi.Name == "SetLanguage")
             {
-                var bridge = typeof(HsrtimerTabBridge).GetMethod(
+                var bridge = typeof(TimerSettingsTabBridge).GetMethod(
                     "SetLanguage", BindingFlags.Public | BindingFlags.Static, null,
                     new[] { typeof(string) }, null);
                 il.Emit(OpCodes.Ldarg_1);
@@ -300,7 +337,7 @@ namespace TwilightInputOverlay
             }
             else // Draw
             {
-                var bridge = typeof(HsrtimerTabBridge).GetMethod(
+                var bridge = typeof(TimerSettingsTabBridge).GetMethod(
                     "Draw", BindingFlags.Public | BindingFlags.Static);
                 il.Emit(OpCodes.Call, bridge);
             }

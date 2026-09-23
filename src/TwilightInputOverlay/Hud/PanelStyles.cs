@@ -4,7 +4,7 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// Shared IMGUI styles used by both the standalone settings panel and the
-    /// HSRTimer-integrated tab. Uses a dynamic OS font with CJK fallbacks.
+    /// HSRTimer/TwilightTimer-integrated tab. Uses a dynamic OS font with CJK fallbacks.
     /// </summary>
     internal static class PanelStyles
     {
