@@ -6,8 +6,8 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// The shared IMGUI content for the input-overlay settings. It is drawn both
-    /// by the standalone settings panel and by the HSRTimer-integrated tab.
-    /// When <c>integrated</c> is true, the controls HSRTimer already owns —
+    /// by the standalone settings panel and by the HSRTimer/TwilightTimer-integrated tab.
+    /// When <c>integrated</c> is true, the controls the timer panel already owns —
     /// the settings-panel keybind and the language selector — are omitted.
     /// All edits write directly into <see cref="ConfigService.Settings"/> so
     /// they apply live.
@@ -48,6 +48,9 @@ namespace TwilightInputOverlay
             s.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), s.OffsetY, "0.##");
             s.Scale = Mathf.Max(0.1f, SliderRow(loc.Get("PANEL_SCALE"), s.Scale, 0.1f, 3f));
 
+            Section(loc.Get("PANEL_ANIMATION"));
+            s.FadeSpeed = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_FADE_SPEED"), s.FadeSpeed, 0f, 20f));
+
             Section(loc.Get("PANEL_GRID"));
             s.Spacing = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_SPACING"), s.Spacing, 0f, 24f));
             s.CornerRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_CORNER_RADIUS"), s.CornerRadius, 0f, 24f));
@@ -63,6 +66,22 @@ namespace TwilightInputOverlay
             ColorRow(loc, "PANEL_COLOR_TEXT", style.Text, c => style.Text = c);
             ColorRow(loc, "PANEL_COLOR_BORDER", style.Border, c => style.Border = c);
             ColorRow(loc, "PANEL_COLOR_FILL", style.Fill, c => style.Fill = c);
+
+            Section(loc.Get("PANEL_CURSOR"));
+            s.ShowCursor = Toggle(loc.Get("SETTINGS_SHOW_CURSOR"), s.ShowCursor);
+            s.ShowCursorRegion = Toggle(loc.Get("SETTINGS_SHOW_CURSOR_REGION"), s.ShowCursorRegion);
+            s.CursorRawInput = Toggle(loc.Get("SETTINGS_CURSOR_RAW_INPUT"), s.CursorRawInput);
+            s.CursorWrap = Toggle(loc.Get("SETTINGS_CURSOR_WRAP"), s.CursorWrap);
+            s.CursorRegionX = FloatFieldRow(loc.Get("PANEL_CURSOR_REGION_X"), s.CursorRegionX, "0.##");
+            s.CursorRegionY = FloatFieldRow(loc.Get("PANEL_CURSOR_REGION_Y"), s.CursorRegionY, "0.##");
+            s.CursorRegionWidth = Mathf.Max(1f, FloatFieldRow(loc.Get("PANEL_CURSOR_REGION_W"), s.CursorRegionWidth, "0.##"));
+            s.CursorRegionHeight = Mathf.Max(1f, FloatFieldRow(loc.Get("PANEL_CURSOR_REGION_H"), s.CursorRegionHeight, "0.##"));
+            ColorRow(loc, "PANEL_CURSOR_REGION_COLOR", s.CursorRegionColor, c => s.CursorRegionColor = c);
+            s.CursorRadius = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_CURSOR_RADIUS"), s.CursorRadius, 2f, 64f));
+            s.CursorSensitivity = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_CURSOR_SENSITIVITY"), s.CursorSensitivity, 0.1f, 10f));
+            s.TrailMaxStretch = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_TRAIL_STRETCH"), s.TrailMaxStretch, 1f, 4f));
+            s.TrailResponse = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_TRAIL_RESPONSE"), s.TrailResponse, 0f, 30f));
+            ColorRow(loc, "PANEL_CURSOR_COLOR", s.CursorColor, c => s.CursorColor = c);
         }
 
         // ── sections / widgets ──
@@ -174,7 +193,7 @@ namespace TwilightInputOverlay
                 || k == KeyCode.LeftCommand || k == KeyCode.RightCommand;
         }
 
-        // Single-select language picker, same control as HSRTimer's.
+        // Single-select language picker, same control as HSRTimer's/TwilightTimer's.
         private static void DrawLanguageSelector(ConfigService cfg, LocalizationService loc)
         {
             if (_langCodes == null) RefreshLanguageList();

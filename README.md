@@ -18,6 +18,7 @@ A [BepInEx 5](https://docs.bepinex.dev/) plugin for **Human: Fall Flat** that ad
 - **Live settings panel** — press `Home` to open it. Every change applies to the HUD immediately.
 - **Fully customizable colors** — edit the text, border, and fill colors for both the *idle* and *pressed* states, using either hex color codes or RGBA sliders.
 - **Layout controls** — show/hide the HUD, toggle the key text, adjust the X/Y offset from the bottom-left corner, scale the whole HUD, and tweak key spacing and corner radius.
+- **Smooth key transitions** — keys fade between idle and pressed styles, with a configurable fade speed.
 - **Localization** — comes with English and Simplified Chinese, and you can add more languages by dropping in a language file.
 
 ## Requirements
@@ -31,9 +32,9 @@ A [BepInEx 5](https://docs.bepinex.dev/) plugin for **Human: Fall Flat** that ad
 3. Launch the game. The overlay appears at the bottom-left of the screen.
 4. Press `Home` to open the settings panel.
 
-## HSRTimer integration
+## Timer settings-panel integration
 
-If HSRTimer is installed, TwilightInputOverlay automatically integrates into HSRTimer's settings panel as an **Input Overlay** tab; in that case the standalone `Home`-key panel is not created, so open HSRTimer's settings panel to configure the overlay. Without HSRTimer, the plugin still works normally and provides its own standalone panel.
+If HSRTimer or TwilightTimer (the HSRTimer fork) is installed, TwilightInputOverlay automatically integrates into that timer's settings panel as an **Input Overlay** tab; in that case the standalone `Home`-key panel is not created, so open the timer's settings panel to configure the overlay. HSRTimer is preferred when both are present. Without either timer, the plugin still works normally and provides its own standalone panel.
 
 ## Usage
 
@@ -43,6 +44,7 @@ The panel is organized into a few sections:
 
 - **General** — change the settings panel key, and switch the language.
 - **HUD** — toggle the HUD on/off, toggle the key text on/off, adjust the X/Y offset, and change the overall scale.
+- **Animation** — adjust the idle/pressed fade speed.
 - **Key Grid** — adjust the spacing between keys and the corner radius of the keys.
 - **Style** — pick the *Idle* or *Pressed* state, then edit the **Text**, **Border**, and **Fill** colors with either hex codes or RGBA sliders.
 

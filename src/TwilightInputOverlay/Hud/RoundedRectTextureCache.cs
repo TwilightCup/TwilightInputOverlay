@@ -5,19 +5,21 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// Generates and caches textures used to draw key cells. Fill and border are
-    /// generated as separate textures and drawn in that order (fill first, then
-    /// border on top), so the border can never be hidden by the fill. There is
-    /// also a split-fill variant used by the combined left/right hand key, which
-    /// lets each half keep its own fill color while sharing one outer shape.
+    /// drawn as white "mask" textures that are tinted via GUI.color at draw time,
+    /// so animated/fading colors never force texture regeneration — only the
+    /// shape geometry (size/radius/border width) is baked. The border is drawn
+    /// after the fill so it is always on top. There is also a split-fill variant
+    /// used by the combined left/right hand key, which lets each half keep its
+    /// own fill color while sharing one outer shape (two colors cannot be tinted
+    /// in a single draw, so that one remains color-baked).
     /// </summary>
     internal static class RoundedRectTextureCache
     {
-        private struct FillKey
+        private struct FillMaskKey
         {
             public int Width;
             public int Height;
             public int Radius;
-            public uint Fill;
         }
 
         private struct SplitFillKey
@@ -29,34 +31,34 @@ namespace TwilightInputOverlay
             public uint RightFill;
         }
 
-        private struct BorderKey
+        private struct BorderMaskKey
         {
             public int Width;
             public int Height;
             public int Radius;
             public int BorderWidth;
-            public uint Border;
         }
 
-        private static readonly Dictionary<FillKey, Texture2D> FillCache = new Dictionary<FillKey, Texture2D>();
+        private static readonly Dictionary<FillMaskKey, Texture2D> FillMaskCache = new Dictionary<FillMaskKey, Texture2D>();
         private static readonly Dictionary<SplitFillKey, Texture2D> SplitFillCache = new Dictionary<SplitFillKey, Texture2D>();
-        private static readonly Dictionary<BorderKey, Texture2D> BorderCache = new Dictionary<BorderKey, Texture2D>();
+        private static readonly Dictionary<BorderMaskKey, Texture2D> BorderMaskCache = new Dictionary<BorderMaskKey, Texture2D>();
 
-        public static Texture2D GetFill(int width, int height, int radius, Color fill)
+        /// <summary>White fill mask; tint with GUI.color to apply the actual fill color.</summary>
+        public static Texture2D GetFillMask(int width, int height, int radius)
         {
             width = Mathf.Max(1, width);
             height = Mathf.Max(1, height);
             radius = ClampRadius(width, height, radius);
 
-            var key = new FillKey { Width = width, Height = height, Radius = radius, Fill = Pack(fill) };
+            var key = new FillMaskKey { Width = width, Height = height, Radius = radius };
             Texture2D tex;
-            if (FillCache.TryGetValue(key, out tex))
+            if (FillMaskCache.TryGetValue(key, out tex))
                 return tex;
 
-            if (FillCache.Count > 32)
-                FillCache.Clear();
-            tex = BuildFill(width, height, radius, fill);
-            FillCache[key] = tex;
+            if (FillMaskCache.Count > 32)
+                FillMaskCache.Clear();
+            tex = BuildFillMask(width, height, radius);
+            FillMaskCache[key] = tex;
             return tex;
         }
 
@@ -78,36 +80,36 @@ namespace TwilightInputOverlay
             if (SplitFillCache.TryGetValue(key, out tex))
                 return tex;
 
-            if (SplitFillCache.Count > 32)
+            if (SplitFillCache.Count > 64)
                 SplitFillCache.Clear();
             tex = BuildSplitFill(width, height, radius, leftFill, rightFill);
             SplitFillCache[key] = tex;
             return tex;
         }
 
-        public static Texture2D GetBorder(int width, int height, int radius, int borderWidth, Color border)
+        /// <summary>White border mask; tint with GUI.color to apply the actual border color.</summary>
+        public static Texture2D GetBorderMask(int width, int height, int radius, int borderWidth)
         {
             width = Mathf.Max(1, width);
             height = Mathf.Max(1, height);
             radius = ClampRadius(width, height, radius);
             borderWidth = Mathf.Max(0, borderWidth);
 
-            var key = new BorderKey
+            var key = new BorderMaskKey
             {
                 Width = width,
                 Height = height,
                 Radius = radius,
                 BorderWidth = borderWidth,
-                Border = Pack(border),
             };
             Texture2D tex;
-            if (BorderCache.TryGetValue(key, out tex))
+            if (BorderMaskCache.TryGetValue(key, out tex))
                 return tex;
 
-            if (BorderCache.Count > 32)
-                BorderCache.Clear();
-            tex = BuildBorder(width, height, radius, borderWidth, border);
-            BorderCache[key] = tex;
+            if (BorderMaskCache.Count > 32)
+                BorderMaskCache.Clear();
+            tex = BuildBorderMask(width, height, radius, borderWidth);
+            BorderMaskCache[key] = tex;
             return tex;
         }
 
@@ -116,7 +118,7 @@ namespace TwilightInputOverlay
             return Mathf.Max(0, Mathf.Min(radius, Mathf.Min(width, height) / 2));
         }
 
-        private static Texture2D BuildFill(int width, int height, int radius, Color fill)
+        private static Texture2D BuildFillMask(int width, int height, int radius)
         {
             var tex = new Texture2D(width, height, TextureFormat.ARGB32, false);
             tex.wrapMode = TextureWrapMode.Clamp;
@@ -129,12 +131,7 @@ namespace TwilightInputOverlay
                 {
                     float coverage;
                     bool inside = ShapeCoverage(x + 0.5f, y + 0.5f, width, height, radius, out coverage);
-                    Color c = new Color(0f, 0f, 0f, 0f);
-                    if (inside)
-                    {
-                        c = fill;
-                        c.a *= coverage;
-                    }
+                    Color c = new Color(1f, 1f, 1f, inside ? coverage : 0f);
                     pixels[y * width + x] = c;
                 }
             }
@@ -174,7 +171,7 @@ namespace TwilightInputOverlay
             return tex;
         }
 
-        private static Texture2D BuildBorder(int width, int height, int radius, int borderWidth, Color border)
+        private static Texture2D BuildBorderMask(int width, int height, int radius, int borderWidth)
         {
             var tex = new Texture2D(width, height, TextureFormat.ARGB32, false);
             tex.wrapMode = TextureWrapMode.Clamp;
@@ -187,7 +184,7 @@ namespace TwilightInputOverlay
                 {
                     float px = x + 0.5f;
                     float py = y + 0.5f;
-                    Color c = new Color(0f, 0f, 0f, 0f);
+                    float alpha = 0f;
 
                     float coverage;
                     bool inside = ShapeCoverage(px, py, width, height, radius, out coverage);
@@ -196,14 +193,12 @@ namespace TwilightInputOverlay
                         float edgeDist = EdgeDistance(px, py, width, height, radius);
                         if (edgeDist <= borderWidth)
                         {
-                            float borderCoverage = radius <= 0f
+                            alpha = radius <= 0f
                                 ? 1f
                                 : Mathf.Clamp01(borderWidth - edgeDist + 0.5f);
-                            c = border;
-                            c.a *= borderCoverage;
                         }
                     }
-                    pixels[y * width + x] = c;
+                    pixels[y * width + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
 

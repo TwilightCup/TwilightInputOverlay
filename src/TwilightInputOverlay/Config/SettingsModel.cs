@@ -54,7 +54,36 @@ namespace TwilightInputOverlay
         public float Spacing = 0f;
         public float CornerRadius = 0f;
 
-        // Standalone-panel keybind; not shown when integrated into HSRTimer.
+        // Idle/pressed transition animation speed. Higher fades faster; 0 disables.
+        public float FadeSpeed = 8f;
+
+        // Mouse-cursor overlay: a bounded region in which a tinted circle follows
+        // the mouse. The cursor rotates toward its motion direction and grows a
+        // rear half-ellipse trail that stretches with speed, then recovers.
+        public bool ShowCursor = true;
+        // Draw the region rectangle itself as a tinted backdrop behind the cursor.
+        public bool ShowCursorRegion = true;
+        // Read the raw mouse movement axes instead of the hardware cursor's screen
+        // position. The movement axes keep reporting while the OS cursor is pinned
+        // at a screen edge (e.g. in a menu), so the overlay cursor keeps moving.
+        public bool CursorRawInput = true;
+        // true = leave the region from the opposite edge; false = snap back to the centre.
+        public bool CursorWrap = true;
+        // Region rectangle, anchored to the screen's bottom-right corner, so
+        // CursorRegionX is the distance from the right edge and CursorRegionY
+        // the distance from the bottom edge.
+        public float CursorRegionX = 40f;
+        public float CursorRegionY = 40f;
+        public float CursorRegionWidth = 360f;
+        public float CursorRegionHeight = 240f;
+        public Color CursorRegionColor = new Color(1f, 1f, 1f, 0.12f);
+        public float CursorRadius = 12f;
+        public float CursorSensitivity = 1f;
+        public float TrailMaxStretch = 2.5f;
+        public float TrailResponse = 12f;
+        public Color CursorColor = new Color(1f, 1f, 1f, 1f);
+
+        // Standalone-panel keybind; not shown when integrated into a timer's panel.
         public KeyCode PanelKey = KeyCode.Home;
 
         public string CurrentLang = "en";
@@ -92,6 +121,21 @@ namespace TwilightInputOverlay
                     case "scale": Scale = Mathf.Max(0.1f, ParseFloat(value, Scale)); break;
                     case "spacing": Spacing = Mathf.Max(0f, ParseFloat(value, Spacing)); break;
                     case "corner_radius": CornerRadius = Mathf.Max(0f, ParseFloat(value, CornerRadius)); break;
+                    case "fade_speed": FadeSpeed = Mathf.Max(0f, ParseFloat(value, FadeSpeed)); break;
+                    case "show_cursor": ShowCursor = ParseBool(value, ShowCursor); break;
+                    case "show_cursor_region": ShowCursorRegion = ParseBool(value, ShowCursorRegion); break;
+                    case "cursor_raw_input": CursorRawInput = ParseBool(value, CursorRawInput); break;
+                    case "cursor_wrap": CursorWrap = ParseBool(value, CursorWrap); break;
+                    case "cursor_region_x": CursorRegionX = ParseFloat(value, CursorRegionX); break;
+                    case "cursor_region_y": CursorRegionY = ParseFloat(value, CursorRegionY); break;
+                    case "cursor_region_width": CursorRegionWidth = Mathf.Max(1f, ParseFloat(value, CursorRegionWidth)); break;
+                    case "cursor_region_height": CursorRegionHeight = Mathf.Max(1f, ParseFloat(value, CursorRegionHeight)); break;
+                    case "cursor_region_color": CursorRegionColor = ColorUtil.ParseColor(value, CursorRegionColor); break;
+                    case "cursor_radius": CursorRadius = Mathf.Max(1f, ParseFloat(value, CursorRadius)); break;
+                    case "cursor_sensitivity": CursorSensitivity = Mathf.Max(0f, ParseFloat(value, CursorSensitivity)); break;
+                    case "trail_max_stretch": TrailMaxStretch = Mathf.Max(1f, ParseFloat(value, TrailMaxStretch)); break;
+                    case "trail_response": TrailResponse = Mathf.Max(0f, ParseFloat(value, TrailResponse)); break;
+                    case "cursor_color": CursorColor = ColorUtil.ParseColor(value, CursorColor); break;
                     case "panel_key": PanelKey = ParseKeyCode(value, PanelKey); break;
                     case "language": CurrentLang = value; break;
                     default:
@@ -136,6 +180,21 @@ namespace TwilightInputOverlay
                 ["scale"] = Scale.ToString("0.###", CultureInfo.InvariantCulture),
                 ["spacing"] = Spacing.ToString("0.###", CultureInfo.InvariantCulture),
                 ["corner_radius"] = CornerRadius.ToString("0.###", CultureInfo.InvariantCulture),
+                ["fade_speed"] = FadeSpeed.ToString("0.###", CultureInfo.InvariantCulture),
+                ["show_cursor"] = ShowCursor ? "true" : "false",
+                ["show_cursor_region"] = ShowCursorRegion ? "true" : "false",
+                ["cursor_raw_input"] = CursorRawInput ? "true" : "false",
+                ["cursor_wrap"] = CursorWrap ? "true" : "false",
+                ["cursor_region_x"] = CursorRegionX.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_region_y"] = CursorRegionY.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_region_width"] = CursorRegionWidth.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_region_height"] = CursorRegionHeight.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_region_color"] = ColorUtil.ToHex(CursorRegionColor),
+                ["cursor_radius"] = CursorRadius.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_sensitivity"] = CursorSensitivity.ToString("0.###", CultureInfo.InvariantCulture),
+                ["trail_max_stretch"] = TrailMaxStretch.ToString("0.###", CultureInfo.InvariantCulture),
+                ["trail_response"] = TrailResponse.ToString("0.###", CultureInfo.InvariantCulture),
+                ["cursor_color"] = ColorUtil.ToHex(CursorColor),
                 ["panel_key"] = PanelKey.ToString(),
                 ["language"] = CurrentLang,
             };

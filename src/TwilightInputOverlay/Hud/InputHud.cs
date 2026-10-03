@@ -15,6 +15,8 @@ namespace TwilightInputOverlay
     /// keeps its own text and fill state. The combined width is one full grid
     /// cell, so the top row, middle row, and the jump row are all
     /// <c>3 * cell + 2 * spacing</c> wide.
+    /// Each key fades between the idle and pressed styles; the fade speed comes
+    /// from <see cref="SettingsModel.FadeSpeed"/>.
     /// </summary>
     public class InputHud : MonoBehaviour
     {
@@ -34,6 +36,9 @@ namespace TwilightInputOverlay
         private Font _font;
         private int _appliedFontSize = -1;
 
+        // Per-key transition progress: 0 = fully idle, 1 = fully pressed.
+        private float[] _fadeProgress = new float[8];
+
         private void Awake()
         {
             _keyStyle = new GUIStyle
@@ -42,6 +47,29 @@ namespace TwilightInputOverlay
                 richText = false,
                 normal = { textColor = Color.white },
             };
+        }
+
+        private void Update()
+        {
+            var cfg = ConfigService.Instance;
+            if (cfg == null) return;
+
+            float speed = cfg.Settings.FadeSpeed;
+            for (int i = 0; i < _fadeProgress.Length; i++)
+            {
+                float target = IsPressed((KeyKind)i) ? 1f : 0f;
+                if (speed <= 0f)
+                {
+                    _fadeProgress[i] = target;
+                    continue;
+                }
+
+                float p = _fadeProgress[i];
+                if (p < target)
+                    _fadeProgress[i] = Mathf.Min(target, p + Time.deltaTime * speed);
+                else if (p > target)
+                    _fadeProgress[i] = Mathf.Max(target, p - Time.deltaTime * speed);
+            }
         }
 
         private void OnGUI()
@@ -110,17 +138,19 @@ namespace TwilightInputOverlay
 
         private void DrawKey(KeyKind kind, Rect rect, float cell, float radius, int borderWidth, bool showText)
         {
-            bool pressed = IsPressed(kind);
-            var style = pressed ? ConfigService.Instance.Settings.Pressed : ConfigService.Instance.Settings.Idle;
+            var s = ConfigService.Instance.Settings;
+            float t = _fadeProgress[(int)kind];
+            var style = LerpStyle(s.Idle, s.Pressed, t);
 
             int tw = Mathf.Max(1, Mathf.RoundToInt(rect.width));
             int th = Mathf.Max(1, Mathf.RoundToInt(rect.height));
             int rad = Mathf.Max(0, Mathf.RoundToInt(radius));
 
             Color prev = GUI.color;
-            GUI.color = Color.white;
-            GUI.DrawTexture(rect, RoundedRectTextureCache.GetFill(tw, th, rad, style.Fill));
-            GUI.DrawTexture(rect, RoundedRectTextureCache.GetBorder(tw, th, rad, borderWidth, style.Border));
+            GUI.color = style.Fill;
+            GUI.DrawTexture(rect, RoundedRectTextureCache.GetFillMask(tw, th, rad));
+            GUI.color = style.Border;
+            GUI.DrawTexture(rect, RoundedRectTextureCache.GetBorderMask(tw, th, rad, borderWidth));
             GUI.color = prev;
 
             if (showText)
@@ -134,15 +164,15 @@ namespace TwilightInputOverlay
 
         private void DrawCombinedHands(Rect rect, float cell, float radius, int borderWidth, bool showText)
         {
-            bool leftPressed = InputState.LeftHand;
-            bool rightPressed = InputState.RightHand;
             var s = ConfigService.Instance.Settings;
-            var leftStyle = leftPressed ? s.Pressed : s.Idle;
-            var rightStyle = rightPressed ? s.Pressed : s.Idle;
+            float leftT = _fadeProgress[(int)KeyKind.LeftHand];
+            float rightT = _fadeProgress[(int)KeyKind.RightHand];
+            var leftStyle = LerpStyle(s.Idle, s.Pressed, leftT);
+            var rightStyle = LerpStyle(s.Idle, s.Pressed, rightT);
 
-            // Border state is ORed: if either hand is pressed, the shared border
-            // uses the pressed border color.
-            var borderStyle = (leftPressed || rightPressed) ? s.Pressed : s.Idle;
+            // The shared border follows the more-pressed half, matching the old
+            // OR semantics while still animating smoothly.
+            var borderStyle = LerpStyle(s.Idle, s.Pressed, Mathf.Max(leftT, rightT));
 
             int tw = Mathf.Max(1, Mathf.RoundToInt(rect.width));
             int th = Mathf.Max(1, Mathf.RoundToInt(rect.height));
@@ -151,7 +181,8 @@ namespace TwilightInputOverlay
             Color prev = GUI.color;
             GUI.color = Color.white;
             GUI.DrawTexture(rect, RoundedRectTextureCache.GetSplitFill(tw, th, rad, leftStyle.Fill, rightStyle.Fill));
-            GUI.DrawTexture(rect, RoundedRectTextureCache.GetBorder(tw, th, rad, borderWidth, borderStyle.Border));
+            GUI.color = borderStyle.Border;
+            GUI.DrawTexture(rect, RoundedRectTextureCache.GetBorderMask(tw, th, rad, borderWidth));
             GUI.color = prev;
 
             if (showText)
@@ -161,6 +192,16 @@ namespace TwilightInputOverlay
                 DrawText(leftRect, "L", leftStyle.Text, cell, true);
                 DrawText(rightRect, "R", rightStyle.Text, cell, true);
             }
+        }
+
+        private static ButtonStyle LerpStyle(ButtonStyle idle, ButtonStyle pressed, float t)
+        {
+            return new ButtonStyle
+            {
+                Text = Color.Lerp(idle.Text, pressed.Text, t),
+                Border = Color.Lerp(idle.Border, pressed.Border, t),
+                Fill = Color.Lerp(idle.Fill, pressed.Fill, t),
+            };
         }
 
         private void DrawText(Rect rect, string label, Color color, float cell, bool applyLift)
