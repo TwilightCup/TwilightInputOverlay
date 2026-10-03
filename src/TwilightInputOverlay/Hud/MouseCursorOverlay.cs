@@ -24,7 +24,10 @@ namespace TwilightInputOverlay
     /// <para>
     /// The cursor is directional: it rotates toward its motion direction and
     /// drags a rear half-ellipse trail that stretches with speed and recovers as
-    /// it slows. Cursor and trail are drawn from a single union-shaped mask
+    /// it slows. The heading tracks the current motion closely; on a sharp
+    /// reversal it snaps and the trail briefly retracts to a circle so the flip
+    /// is never seen as a sweep through the perpendicular. Cursor and trail are
+    /// drawn from a single union-shaped mask
     /// (<see cref="CursorShapeTextureCache"/>) tinted with
     /// <see cref="SettingsModel.CursorColor"/>, so they share one colour and one
     /// alpha and read as a single body even when semi-transparent.
@@ -37,8 +40,19 @@ namespace TwilightInputOverlay
         // This converts the locked-cursor axis input back to screen pixels.
         private const float AxisToPixels = 10f;
 
-        // How fast the cursor turns toward a new motion direction (degrees/sec).
-        private const float TurnSpeed = 1080f;
+        // Heading tracking. The trail must always sit behind the current motion,
+        // so ordinary turns are followed quickly (a base rate plus a gain that
+        // grows with the turn size). A change larger than ReversalAngle is a
+        // reversal: it is snapped instantly instead of swept through the
+        // perpendicular, and the trail is briefly retracted so the flip happens
+        // while the tail is invisible.
+        private const float VelocitySmoothTau = 0.02f; // velocity smoothing, seconds
+        private const float MinSpeed = 10f;            // px/s; below this the heading is kept
+        private const float BaseTurn = 1800f;          // deg/s for the smallest tracked turn
+        private const float TurnGain = 20f;            // extra deg/s per degree of turn
+        private const float ReversalAngle = 100f;      // deg; past this, snap + retract
+        private const float HeadingDeadZone = 2f;      // deg; ignore smaller changes
+        private const float ReversalHold = 0.05f;      // s the trail stays retracted
 
         // Reference speed at which the trail reaches its full stretch. Tied to
         // the cursor radius so it feels the same at any size.
@@ -48,6 +62,11 @@ namespace TwilightInputOverlay
         private float _stretch = 1f;
         private float _angle;
         private bool _initialized;
+
+        // Smoothed velocity (px/s, GUI space) used to derive a stable heading,
+        // and the remaining time the trail stays retracted after a reversal.
+        private Vector2 _velocity;
+        private float _reversalHold;
 
         private Vector2 _prevMousePos;
         private bool _hasPrevMousePos;
@@ -61,6 +80,8 @@ namespace TwilightInputOverlay
             {
                 _initialized = false;
                 _hasPrevMousePos = false;
+                _velocity = Vector2.zero;
+                _reversalHold = 0f;
                 return;
             }
 
@@ -68,6 +89,8 @@ namespace TwilightInputOverlay
             if (!_initialized)
             {
                 _pos = region.center;
+                _velocity = Vector2.zero;
+                _reversalHold = 0f;
                 _initialized = true;
             }
 
@@ -132,19 +155,60 @@ namespace TwilightInputOverlay
 
         private void UpdateTrail(Vector2 delta, float dt, float radius, float maxStretch, float response)
         {
-            // Direction follows the motion, so the trail always drags behind.
-            if (delta.sqrMagnitude > 0.000001f)
-            {
-                float targetAngle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
-                _angle = Mathf.MoveTowardsAngle(_angle, targetAngle, TurnSpeed * dt);
-            }
+            Vector2 instantVelocity = delta / dt;
+            float speed = instantVelocity.magnitude;
 
-            float speed = delta.magnitude / dt;
+            UpdateHeading(instantVelocity, speed, dt);
+
+            if (_reversalHold > 0f)
+                _reversalHold = Mathf.Max(0f, _reversalHold - dt);
+
             float reference = Mathf.Max(1f, radius * SpeedReferenceFactor);
             float target = 1f + (Mathf.Max(1f, maxStretch) - 1f) * Mathf.Clamp01(speed / reference);
+
+            // While the trail is retracted after a reversal, pin it to a circle so
+            // the heading flip happens while the tail cannot be seen; it then
+            // regrows in the new direction. (A circle is rotationally symmetric.)
+            if (_reversalHold > 0f)
+                target = 1f;
+
             _stretch = response <= 0f
                 ? target
                 : Mathf.MoveTowards(_stretch, target, response * dt);
+        }
+
+        private void UpdateHeading(Vector2 instantVelocity, float speed, float dt)
+        {
+            float blend = 1f - Mathf.Exp(-dt / VelocitySmoothTau);
+
+            if (speed < MinSpeed)
+            {
+                // Too slow to trust the direction; let the smoothed velocity decay
+                // so a quick flick does not fling the heading around.
+                _velocity = Vector2.Lerp(_velocity, Vector2.zero, blend);
+                return;
+            }
+
+            _velocity = Vector2.Lerp(_velocity, instantVelocity, blend);
+            if (_velocity.sqrMagnitude <= 0.000001f) return;
+
+            float targetAngle = Mathf.Atan2(_velocity.y, _velocity.x) * Mathf.Rad2Deg;
+            float diff = Mathf.Abs(Mathf.DeltaAngle(_angle, targetAngle));
+
+            if (diff > ReversalAngle)
+            {
+                // Reversal: flip now and retract the trail to hide the flip.
+                _angle = targetAngle;
+                _stretch = 1f;
+                _reversalHold = ReversalHold;
+            }
+            else if (diff > HeadingDeadZone)
+            {
+                // Ordinary turn: a high base rate plus a gain for larger turns, so
+                // even a small kink is followed within a frame instead of lagging.
+                float turnRate = BaseTurn + TurnGain * diff;
+                _angle = Mathf.MoveTowardsAngle(_angle, targetAngle, turnRate * dt);
+            }
         }
 
         private static void ApplyExitPolicy(ref Vector2 pos, Rect region, bool wrap)
