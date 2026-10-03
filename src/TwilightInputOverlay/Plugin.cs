@@ -34,6 +34,7 @@ namespace TwilightInputOverlay
             var hudGo = new GameObject("TwilightInputOverlay.Hud");
             Object.DontDestroyOnLoad(hudGo);
             hudGo.AddComponent<InputHud>();
+            hudGo.AddComponent<MouseCursorOverlay>();
 
             // 3. Optional HSRTimer/TwilightTimer integration. This is pure
             //    reflection, so the plugin loads fine when neither timer is

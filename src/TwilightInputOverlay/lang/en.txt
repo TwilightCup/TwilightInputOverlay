@@ -32,6 +32,23 @@ PANEL_GRID:Key Grid
 SETTINGS_SPACING:Key Spacing
 SETTINGS_CORNER_RADIUS:Corner Radius
 
+# ===== Mouse cursor =====
+PANEL_CURSOR:Mouse Cursor
+SETTINGS_SHOW_CURSOR:Show cursor
+SETTINGS_SHOW_CURSOR_REGION:Show region
+SETTINGS_CURSOR_RAW_INPUT:Use raw mouse input (keeps moving at screen edges)
+SETTINGS_CURSOR_WRAP:Wrap to opposite edge (off: return to centre)
+PANEL_CURSOR_REGION_X:Region X (from right)
+PANEL_CURSOR_REGION_Y:Region Y (from bottom)
+PANEL_CURSOR_REGION_W:Region Width
+PANEL_CURSOR_REGION_H:Region Height
+PANEL_CURSOR_REGION_COLOR:Region Color
+SETTINGS_CURSOR_RADIUS:Cursor Size
+SETTINGS_CURSOR_SENSITIVITY:Cursor Sensitivity
+PANEL_CURSOR_COLOR:Cursor Color
+SETTINGS_TRAIL_STRETCH:Trail Max Length
+SETTINGS_TRAIL_RESPONSE:Trail Response
+
 # ===== Style =====
 PANEL_STYLE:Style
 PANEL_STATE_IDLE:Idle
