@@ -55,6 +55,18 @@ namespace TwilightInputOverlay
             s.Spacing = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_SPACING"), s.Spacing, 0f, 24f));
             s.CornerRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_CORNER_RADIUS"), s.CornerRadius, 0f, 24f));
 
+            Section(loc.Get("PANEL_STYLE"));
+            int nextState = GUILayout.SelectionGrid(_editingState,
+                new[] { loc.Get("PANEL_STATE_IDLE"), loc.Get("PANEL_STATE_PRESSED") },
+                2, PanelStyles.Button);
+            if (nextState != _editingState)
+                _editingState = nextState;
+
+            ButtonStyle style = _editingState == 0 ? s.Idle : s.Pressed;
+            ColorRow(loc, "PANEL_COLOR_TEXT", style.Text, c => style.Text = c);
+            ColorRow(loc, "PANEL_COLOR_BORDER", style.Border, c => style.Border = c);
+            ColorRow(loc, "PANEL_COLOR_FILL", style.Fill, c => style.Fill = c);
+
             Section(loc.Get("PANEL_CURSOR"));
             s.ShowCursor = Toggle(loc.Get("SETTINGS_SHOW_CURSOR"), s.ShowCursor);
             s.ShowCursorRegion = Toggle(loc.Get("SETTINGS_SHOW_CURSOR_REGION"), s.ShowCursorRegion);
@@ -70,18 +82,6 @@ namespace TwilightInputOverlay
             s.TrailMaxStretch = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_TRAIL_STRETCH"), s.TrailMaxStretch, 1f, 4f));
             s.TrailResponse = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_TRAIL_RESPONSE"), s.TrailResponse, 0f, 30f));
             ColorRow(loc, "PANEL_CURSOR_COLOR", s.CursorColor, c => s.CursorColor = c);
-
-            Section(loc.Get("PANEL_STYLE"));
-            int nextState = GUILayout.SelectionGrid(_editingState,
-                new[] { loc.Get("PANEL_STATE_IDLE"), loc.Get("PANEL_STATE_PRESSED") },
-                2, PanelStyles.Button);
-            if (nextState != _editingState)
-                _editingState = nextState;
-
-            ButtonStyle style = _editingState == 0 ? s.Idle : s.Pressed;
-            ColorRow(loc, "PANEL_COLOR_TEXT", style.Text, c => style.Text = c);
-            ColorRow(loc, "PANEL_COLOR_BORDER", style.Border, c => style.Border = c);
-            ColorRow(loc, "PANEL_COLOR_FILL", style.Fill, c => style.Fill = c);
         }
 
         // ── sections / widgets ──
