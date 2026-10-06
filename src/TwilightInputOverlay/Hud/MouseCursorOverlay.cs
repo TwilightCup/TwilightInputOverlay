@@ -7,8 +7,10 @@ namespace TwilightInputOverlay
     /// is driven by the mouse's movement delta (so it also works while the game
     /// locks/hides the hardware cursor, as Human: Fall Flat does): each frame it
     /// moves by the mouse delta and, when it leaves the region, either wraps to
-    /// the opposite edge or snaps back to the region centre, per
-    /// <see cref="SettingsModel.CursorWrap"/>.
+    /// the opposite edge, snaps back to the region centre, or is clamped to the
+    /// region bounds, per <see cref="SettingsModel.CursorWrap"/> and
+    /// <see cref="SettingsModel.CursorClamp"/> (clamp takes precedence and keeps
+    /// the cursor inside the region, stopping at the edge).
     /// <para>
     /// By default the delta comes from the raw mouse movement axes
     /// (<see cref="SettingsModel.CursorRawInput"/>), which keep reporting even
@@ -101,7 +103,7 @@ namespace TwilightInputOverlay
             Vector2 delta = ReadMouseDelta(s);
             _pos += delta;
 
-            ApplyExitPolicy(ref _pos, region, s.CursorWrap);
+            ApplyExitPolicy(ref _pos, region, s.CursorWrap, s.CursorClamp);
 
             float radius = Mathf.Max(1f, s.CursorRadius);
             UpdateTrail(delta, dt, radius, s.TrailMaxStretch, s.TrailResponse);
@@ -211,8 +213,17 @@ namespace TwilightInputOverlay
             }
         }
 
-        private static void ApplyExitPolicy(ref Vector2 pos, Rect region, bool wrap)
+        private static void ApplyExitPolicy(ref Vector2 pos, Rect region, bool wrap, bool clamp)
         {
+            // Clamp: never leave the region; the cursor stops at the edge. This
+            // takes precedence over wrap/return-to-centre, so it is checked first.
+            if (clamp)
+            {
+                pos.x = Mathf.Clamp(pos.x, region.xMin, region.xMax);
+                pos.y = Mathf.Clamp(pos.y, region.yMin, region.yMax);
+                return;
+            }
+
             if (!Outside(pos, region)) return;
 
             if (wrap && region.width > 0f && region.height > 0f)

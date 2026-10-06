@@ -69,6 +69,9 @@ namespace TwilightInputOverlay
         public bool CursorRawInput = true;
         // true = leave the region from the opposite edge; false = snap back to the centre.
         public bool CursorWrap = true;
+        // true = clamp the cursor to the region bounds so it never leaves the
+        // region (it stops at the edge); takes precedence over CursorWrap.
+        public bool CursorClamp = false;
         // Region rectangle, anchored to the screen's bottom-right corner, so
         // CursorRegionX is the distance from the right edge and CursorRegionY
         // the distance from the bottom edge.
@@ -126,6 +129,7 @@ namespace TwilightInputOverlay
                     case "show_cursor_region": ShowCursorRegion = ParseBool(value, ShowCursorRegion); break;
                     case "cursor_raw_input": CursorRawInput = ParseBool(value, CursorRawInput); break;
                     case "cursor_wrap": CursorWrap = ParseBool(value, CursorWrap); break;
+                    case "cursor_clamp": CursorClamp = ParseBool(value, CursorClamp); break;
                     case "cursor_region_x": CursorRegionX = ParseFloat(value, CursorRegionX); break;
                     case "cursor_region_y": CursorRegionY = ParseFloat(value, CursorRegionY); break;
                     case "cursor_region_width": CursorRegionWidth = Mathf.Max(1f, ParseFloat(value, CursorRegionWidth)); break;
@@ -185,6 +189,7 @@ namespace TwilightInputOverlay
                 ["show_cursor_region"] = ShowCursorRegion ? "true" : "false",
                 ["cursor_raw_input"] = CursorRawInput ? "true" : "false",
                 ["cursor_wrap"] = CursorWrap ? "true" : "false",
+                ["cursor_clamp"] = CursorClamp ? "true" : "false",
                 ["cursor_region_x"] = CursorRegionX.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_region_y"] = CursorRegionY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_region_width"] = CursorRegionWidth.ToString("0.###", CultureInfo.InvariantCulture),

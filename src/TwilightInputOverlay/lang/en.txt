@@ -37,6 +37,7 @@ PANEL_CURSOR:Mouse Cursor
 SETTINGS_SHOW_CURSOR:Show cursor
 SETTINGS_SHOW_CURSOR_REGION:Show region
 SETTINGS_CURSOR_RAW_INPUT:Use raw mouse input (keeps moving at screen edges)
+SETTINGS_CURSOR_CLAMP:Clamp cursor inside region (stops at edge)
 SETTINGS_CURSOR_WRAP:Wrap to opposite edge (off: return to centre)
 PANEL_CURSOR_REGION_X:Region X (from right)
 PANEL_CURSOR_REGION_Y:Region Y (from bottom)
