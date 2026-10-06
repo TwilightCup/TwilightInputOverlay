@@ -7,6 +7,12 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply immediately and are saved on close.
 
+# ===== Sub-pages =====
+TAB_KEY_OVERLAY:Key Overlay
+TAB_MOUSE_OVERLAY:Mouse Overlay
+PANEL_BACK:← Back
+PANEL_SELECT_PAGE:Choose a section to configure:
+
 # ===== General =====
 PANEL_GENERAL:General
 SETTINGS_PANEL_KEY:Settings Panel Key

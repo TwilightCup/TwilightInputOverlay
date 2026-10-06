@@ -7,6 +7,12 @@ PANEL_SAVE:保存
 PANEL_CLOSE:关闭
 PANEL_FOOTER:改动会实时生效，并在关闭时保存。
 
+# ===== 子页面 =====
+TAB_KEY_OVERLAY:按键显示
+TAB_MOUSE_OVERLAY:鼠标显示
+PANEL_BACK:← 返回
+PANEL_SELECT_PAGE:选择要配置的区域：
+
 # ===== 通用 =====
 PANEL_GENERAL:通用
 SETTINGS_PANEL_KEY:配置面板按键

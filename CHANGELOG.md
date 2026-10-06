@@ -6,6 +6,7 @@
 - **Highlights**: Placeholder
 - **Details**:
   - New "clamp cursor inside region" option for the mouse-cursor overlay: the cursor stops at the region edge instead of wrapping or snapping back to the centre, so it never leaves the configured region.
+  - The settings panel is split into two sub-pages — **Key Overlay** (key-grid HUD) and **Mouse Overlay** (cursor region and trail) — so each section is easier to find and stays compact.
 - **Contributors**: Placeholder
 
 ## 1.1.0

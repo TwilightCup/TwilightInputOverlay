@@ -48,8 +48,16 @@ namespace TwilightInputOverlay
         public void Toggle()
         {
             _visible = !_visible;
-            if (!_visible && ConfigService.Instance != null)
+            if (_visible)
+            {
+                // Open on the root page: clear any open sub-page, language
+                // dropdown and pending key rebind from a previous session.
+                PanelContent.ResetTransientState();
+            }
+            else if (ConfigService.Instance != null)
+            {
                 ConfigService.Instance.SaveSettings();
+            }
         }
 
         private void OnGUI()
