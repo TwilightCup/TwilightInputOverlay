@@ -11,11 +11,13 @@ namespace TwilightInputOverlay
     /// The content is split into three drill-down sub-pages — Key Overlay (the
     /// key-grid HUD), Mouse Overlay (cursor region + trail) and Key Layout (the
     /// customizable key layout) — reachable from the root page's entry buttons;
-    /// each sub-page has a Back button at the top. The Key Layout page drills
-    /// one level deeper into a row sub-page. When <c>integrated</c> is true, the
-    /// controls the timer panel already owns — the settings-panel keybind and
-    /// the language selector — are omitted from the root page. All edits write
-    /// directly into <see cref="ConfigService.Settings"/> so they apply live.
+    /// each sub-page has a Back button at the top. The root page also hosts the
+    /// preset selector (mirroring HSRTimer's R11 preset UI) directly above the
+    /// entry buttons. The Key Layout page drills one level deeper into a row
+    /// sub-page. When <c>integrated</c> is true, the controls the timer panel
+    /// already owns — the settings-panel keybind and the language selector — are
+    /// omitted from the root page. All edits write directly into
+    /// <see cref="ConfigService.Settings"/> so they apply live.
     /// </summary>
     internal static class PanelContent
     {
@@ -40,6 +42,16 @@ namespace TwilightInputOverlay
         private static bool _langDropdownOpen;
         private static int _editingState; // 0 = idle, 1 = pressed
         private static SubPage _subPage = SubPage.Root;
+
+        // Preset selector state (mirrors HSRTimer's R11 preset UI). The selected
+        // preset itself lives in SettingsModel.CurrentPreset; these fields only
+        // back the IMGUI controls.
+        private static string[] _presetNames;
+        private static bool _presetDropdownOpen;
+        private static bool _presetCreating;
+        private static bool _presetDeleting;
+        private static string _presetNewName = "";
+        private static string _presetErrorKey;
 
         // Key Layout drill-down state. Indices are used for rows/keys; after any
         // deletion the affected state is cleared (indices drift, HSRTimer-style).
@@ -77,6 +89,12 @@ namespace TwilightInputOverlay
             _expandedKey = -1;
             _confirmDeleteRow = -1;
             _confirmDeleteKey = -1;
+            _presetDropdownOpen = false;
+            _presetCreating = false;
+            _presetDeleting = false;
+            _presetNewName = "";
+            _presetErrorKey = null;
+            _presetNames = null; // re-read the list each time the panel opens
             LabelBuf.Clear();
             WidthBuf.Clear();
         }
@@ -114,8 +132,10 @@ namespace TwilightInputOverlay
                     return;
             }
 
-            // ── Root page: panel-general controls (standalone only) + the entry
-            //    buttons that drill into the sub-pages. ──
+            // ── Root page: panel-general controls (standalone only) + the
+            //    preset selector + the entry buttons that drill into the
+            //    sub-pages. The preset component sits on the root page, above
+            //    the sub-page entry buttons. ──
             if (!integrated)
             {
                 Section(loc.Get("PANEL_GENERAL"));
@@ -128,6 +148,9 @@ namespace TwilightInputOverlay
                     RefreshLanguageList();
                 }
             }
+
+            Section(loc.Get("SETTINGS_PRESET"));
+            DrawPresetSelector(cfg, loc);
 
             GUILayout.Space(6);
             GUILayout.Label(loc.Get("PANEL_SELECT_PAGE"), PanelStyles.Small);
@@ -699,6 +722,162 @@ namespace TwilightInputOverlay
             }
             _langCodes = codes.ToArray();
             _langDisplays = displays.ToArray();
+        }
+
+        // ── presets (mirrors HSRTimer's R11 preset UI) ──
+
+        /// <summary>
+        /// Single-select preset picker. Mirrors the language dropdown: a button
+        /// + collapsible list, with "New preset" at the bottom. The selection is
+        /// a real config item (SettingsModel.CurrentPreset) persisted via the
+        /// normal SaveSettings path; selecting a preset only switches the
+        /// selection, "Load preset" applies its snapshot to the live config.
+        /// </summary>
+        private static void DrawPresetSelector(ConfigService cfg, LocalizationService loc)
+        {
+            if (_presetNames == null) RefreshPresetList();
+            var s = cfg.Settings;
+            if (_presetNames == null) return;
+
+            string current = s.CurrentPreset;
+            if (!PresetStore.Exists(current))
+                current = PresetStore.DefaultPresetName;
+
+            string selected = (_presetDropdownOpen ? "▾ " : "▸ ") + current + "  " + loc.Get("SETTINGS_PRESET_SELECT_HINT");
+            if (GUILayout.Button(selected, PanelStyles.Button))
+                _presetDropdownOpen = !_presetDropdownOpen;
+
+            if (_presetDropdownOpen)
+            {
+                foreach (var name in _presetNames)
+                {
+                    if (string.IsNullOrEmpty(name)) continue;
+                    string item = string.Equals(name, s.CurrentPreset, StringComparison.Ordinal) ? "✓  " + name : name;
+                    if (GUILayout.Button(item, PanelStyles.Button))
+                    {
+                        if (!string.Equals(name, s.CurrentPreset, StringComparison.Ordinal))
+                        {
+                            s.CurrentPreset = name;
+                            cfg.SaveSettings();
+                            _presetErrorKey = null;
+                            _presetCreating = false;
+                            _presetDeleting = false;
+                        }
+                        _presetDropdownOpen = false;
+                    }
+                }
+
+                // New-preset input row appears directly above the New preset
+                // button, below all existing preset options.
+                if (_presetCreating)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(loc.Get("SETTINGS_PRESET_NEW_NAME"), PanelStyles.Label);
+                    _presetNewName = GUILayout.TextField(_presetNewName, PanelStyles.TextField, GUILayout.Width(160));
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CONFIRM"), PanelStyles.Button, GUILayout.Width(80)))
+                        ConfirmNewPreset(cfg);
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), PanelStyles.Button, GUILayout.Width(80)))
+                    {
+                        _presetCreating = false;
+                        _presetNewName = "";
+                        _presetErrorKey = null;
+                    }
+                    GUILayout.EndHorizontal();
+                    if (_presetErrorKey != null)
+                        GUILayout.Label(loc.Get(_presetErrorKey), PanelStyles.Small);
+                }
+
+                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_NEW"), PanelStyles.Button))
+                {
+                    _presetCreating = !_presetCreating;
+                    _presetDeleting = false;
+                    _presetNewName = "";
+                    _presetErrorKey = null;
+                }
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_LOAD"), PanelStyles.Button))
+            {
+                if (PresetStore.LoadCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_LOAD_FAILED";
+            }
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_SAVE"), PanelStyles.Button))
+            {
+                if (PresetStore.SaveToCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_SAVE_FAILED";
+            }
+            GUILayout.EndHorizontal();
+
+            bool isDefault = string.Equals(s.CurrentPreset, PresetStore.DefaultPresetName, StringComparison.OrdinalIgnoreCase);
+            if (!isDefault)
+            {
+                // Delete with confirmation: the single button expands into a
+                // "Confirm delete" / "Cancel" pair so an accidental click
+                // cannot destroy a preset. The confirm state is dropped when
+                // the panel reopens or the selection changes.
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(_presetDeleting ? loc.Get("SETTINGS_PRESET_DELETE_CONFIRM") : loc.Get("SETTINGS_PRESET_DELETE"), PanelStyles.Button))
+                {
+                    if (!_presetDeleting)
+                    {
+                        _presetDeleting = true;
+                        _presetErrorKey = null;
+                    }
+                    else if (PresetStore.DeleteCurrent(cfg))
+                    {
+                        RefreshPresetList();
+                        _presetDropdownOpen = false;
+                        _presetCreating = false;
+                        _presetDeleting = false;
+                        _presetErrorKey = null;
+                    }
+                    else
+                    {
+                        _presetErrorKey = "SETTINGS_PRESET_DELETE_FAILED";
+                    }
+                }
+                if (_presetDeleting && GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), PanelStyles.Button))
+                {
+                    _presetDeleting = false;
+                    _presetErrorKey = null;
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            if (_presetErrorKey != null)
+                GUILayout.Label(loc.Get(_presetErrorKey), PanelStyles.Small);
+        }
+
+        private static void ConfirmNewPreset(ConfigService cfg)
+        {
+            string errorKey;
+            if (PresetStore.TryCreate(_presetNewName, cfg, out errorKey))
+            {
+                RefreshPresetList();
+                _presetCreating = false;
+                _presetNewName = "";
+                _presetErrorKey = null;
+                // Keep the dropdown open so the new option is visible immediately.
+                _presetDropdownOpen = true;
+            }
+            else
+            {
+                _presetErrorKey = errorKey;
+            }
+        }
+
+        private static void RefreshPresetList()
+        {
+            var cfg = ConfigService.Instance;
+            if (cfg == null) return;
+            _presetNames = PresetStore.ListPresets();
+            if (System.Array.IndexOf(_presetNames, cfg.Settings.CurrentPreset) < 0)
+                cfg.Settings.CurrentPreset = PresetStore.DefaultPresetName;
         }
     }
 }

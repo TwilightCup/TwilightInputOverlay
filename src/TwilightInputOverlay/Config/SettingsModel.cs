@@ -150,15 +150,28 @@ namespace TwilightInputOverlay
 
         public string CurrentLang = "en";
 
+        // ── Presets (R11) ───────────────────────────────────────────────
+        // The currently selected preset. The selection itself is a normal config
+        // item ([Presets] Current) so it survives restarts; there is
+        // intentionally NO separate "presets initialized" flag (first-load /
+        // upgrade is detected by the presence of the presets directory and the
+        // default preset, see PresetStore.EnsureInitialized).
+        public string CurrentPreset = PresetStore.DefaultPresetName;
+
         public ButtonStyle Idle = ButtonStyle.DefaultIdle();
         public ButtonStyle Pressed = ButtonStyle.DefaultPressed();
 
         private const string MainSection = "settings";
         private const string IdleSection = "idle";
         private const string PressedSection = "pressed";
+        private const string PresetsSection = "Presets";
 
         public void Load()
         {
+            // Idempotent: Rows are rebuilt from the file below, so a preset
+            // load can call Load() again without stale rows/keys surviving.
+            Rows.Clear();
+
             int rowCount = -1;      // -1 = not specified by the file
             bool sawRowSection = false;
 
@@ -181,6 +194,8 @@ namespace TwilightInputOverlay
                     ApplyStyle(Idle, p.Key, p.Value, IdleSection);
                 else if (p.Section == PressedSection)
                     ApplyStyle(Pressed, p.Key, p.Value, PressedSection);
+                else if (p.Section == PresetsSection)
+                    ApplyPresets(p.Key, p.Value);
                 else if (IsRowSection(p.Section))
                 {
                     sawRowSection = true;
@@ -359,7 +374,43 @@ namespace TwilightInputOverlay
             }
         }
 
+        private void ApplyPresets(string key, string value)
+        {
+            try
+            {
+                switch (key)
+                {
+                    case "Current": CurrentPreset = string.IsNullOrEmpty(value) ? PresetStore.DefaultPresetName : value; break;
+                    default:
+                        Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: unknown Presets key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: bad Presets value for '{key}' = '{value}', kept default.");
+            }
+        }
+
         public void Save()
+        {
+            WriteTo(PersistenceService.PathFor("settings.ini"), fullConfig: true);
+        }
+
+        /// <summary>
+        /// Write the whole configuration to <paramref name="path"/>, used by
+        /// <see cref="PresetStore"/> to snapshot the current config into a preset
+        /// folder. Global preferences are intentionally left out of snapshots so
+        /// loading a preset never changes them: the UI language, the standalone
+        /// panel hotkey, and the [Presets] selection itself (a snapshot must not
+        /// be able to re-select another preset).
+        /// </summary>
+        public void SaveTo(string path)
+        {
+            WriteTo(path, fullConfig: false);
+        }
+
+        private void WriteTo(string path, bool fullConfig)
         {
             var main = new Dictionary<string, string>
             {
@@ -390,6 +441,13 @@ namespace TwilightInputOverlay
                 ["language"] = CurrentLang,
                 ["row_count"] = Rows.Count.ToString(CultureInfo.InvariantCulture),
             };
+            if (!fullConfig)
+            {
+                // Preset snapshots keep the global preferences (UI language,
+                // panel hotkey) out, as documented on SaveTo.
+                main.Remove("panel_key");
+                main.Remove("language");
+            }
             var idle = StyleSection(Idle);
             var pressed = StyleSection(Pressed);
 
@@ -419,8 +477,17 @@ namespace TwilightInputOverlay
                 sections.Add(new KeyValuePair<string, IDictionary<string, string>>("row" + r, d));
             }
 
+            if (fullConfig)
+            {
+                var presets = new Dictionary<string, string>
+                {
+                    ["Current"] = string.IsNullOrEmpty(CurrentPreset) ? PresetStore.DefaultPresetName : CurrentPreset,
+                };
+                sections.Add(new KeyValuePair<string, IDictionary<string, string>>(PresetsSection, presets));
+            }
+
             PersistenceService.Write(
-                PersistenceService.PathFor("settings.ini"),
+                path,
                 sections,
                 "TwilightInputOverlay settings. Lines of the form 'key = value'. Bad lines are ignored.");
         }
