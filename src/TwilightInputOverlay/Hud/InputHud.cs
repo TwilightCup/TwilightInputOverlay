@@ -1,43 +1,39 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TwilightInputOverlay
 {
     /// <summary>
-    /// Draws the input-overlay HUD: a grid of key cells anchored to the
-    /// bottom-left of the screen.
-    /// <code>
-    /// [装死][前进][左手/右手]
-    /// [左移][后退][右移]
-    /// [跳跃]
-    /// </code>
-    /// The left/right hand keys are rendered as one combined key: they share a
-    /// single border, corner radius, and surrounding spacing, while each half
-    /// keeps its own text and fill state. The combined width is one full grid
-    /// cell, so the top row, middle row, and the jump row are all
-    /// <c>3 * cell + 2 * spacing</c> wide.
-    /// Each key fades between the idle and pressed styles; the fade speed comes
-    /// from <see cref="SettingsModel.FadeSpeed"/>.
+    /// Draws the input-overlay HUD from the customizable key layout
+    /// (<see cref="SettingsModel.Rows"/>): rows stack top to bottom, keys run
+    /// left to right, all anchored to the bottom-left of the screen. A key of
+    /// width 1 is one grid cell; a wider key spans
+    /// <c>width * cell + (width - 1) * spacing</c> so it absorbs the internal
+    /// gaps like the classic jump/space key. A width-1 key with
+    /// <see cref="KeyEntry.Dual"/> renders as two half-width labels sharing one
+    /// cell (like the old left/right hand key), and a
+    /// <see cref="KeyEntry.Blank"/> key reserves its width without drawing or
+    /// reading input. Each key fades between the idle and pressed styles; the
+    /// fade speed comes from <see cref="SettingsModel.FadeSpeed"/>.
     /// </summary>
     public class InputHud : MonoBehaviour
     {
-        private enum KeyKind
-        {
-            PlayDead,
-            Forward,
-            LeftHand,
-            RightHand,
-            Left,
-            Back,
-            Right,
-            Jump,
-        }
-
         private GUIStyle _keyStyle;
         private Font _font;
         private int _appliedFontSize = -1;
 
-        // Per-key transition progress: 0 = fully idle, 1 = fully pressed.
-        private float[] _fadeProgress = new float[8];
+        // Per-key fade progress keyed by a stable slot: 0 = fully idle,
+        // 1 = fully pressed. A single key uses slot id*2; a dual key uses
+        // id*2 (left half) and id*2+1 (right half), so toggling dual carries
+        // the fade over instead of snapping. Rebuilt every Update from the
+        // live layout, which also drops stale entries of deleted keys.
+        private Dictionary<int, float> _fades = new Dictionary<int, float>();
+
+        private static int FadeSlot(KeyEntry e, int half)
+        {
+            // half -1/0 = single or left half, 1 = right half of a dual key.
+            return half <= 0 ? e.Id * 2 : e.Id * 2 + 1;
+        }
 
         private void Awake()
         {
@@ -55,21 +51,43 @@ namespace TwilightInputOverlay
             if (cfg == null) return;
 
             float speed = cfg.Settings.FadeSpeed;
-            for (int i = 0; i < _fadeProgress.Length; i++)
-            {
-                float target = IsPressed((KeyKind)i) ? 1f : 0f;
-                if (speed <= 0f)
-                {
-                    _fadeProgress[i] = target;
-                    continue;
-                }
+            var next = new Dictionary<int, float>();
 
-                float p = _fadeProgress[i];
-                if (p < target)
-                    _fadeProgress[i] = Mathf.Min(target, p + Time.deltaTime * speed);
-                else if (p > target)
-                    _fadeProgress[i] = Mathf.Max(target, p - Time.deltaTime * speed);
+            foreach (var row in cfg.Settings.Rows)
+            {
+                foreach (var e in row.Keys)
+                {
+                    if (e.Blank) continue; // no behaviour, no fade
+
+                    if (e.Width == 1 && e.Dual)
+                    {
+                        Advance(next, FadeSlot(e, 0), InputState.IsHeld(e.Key1), speed);
+                        Advance(next, FadeSlot(e, 1), InputState.IsHeld(e.Key2), speed);
+                    }
+                    else
+                    {
+                        Advance(next, FadeSlot(e, -1), InputState.IsHeld(e.Key1), speed);
+                    }
+                }
             }
+
+            _fades = next;
+        }
+
+        private void Advance(Dictionary<int, float> next, int slot, bool pressed, float speed)
+        {
+            float target = pressed ? 1f : 0f;
+            float p;
+            _fades.TryGetValue(slot, out p);
+
+            if (speed <= 0f)
+                next[slot] = target;
+            else if (p < target)
+                next[slot] = Mathf.Min(target, p + Time.deltaTime * speed);
+            else if (p > target)
+                next[slot] = Mathf.Max(target, p - Time.deltaTime * speed);
+            else
+                next[slot] = target;
         }
 
         private void OnGUI()
@@ -80,66 +98,63 @@ namespace TwilightInputOverlay
             var s = cfg.Settings;
             if (!s.ShowHud) return;
 
+            var rows = s.Rows;
+            if (rows == null || rows.Count == 0) return;
+
             float cell = Mathf.Max(8f, 56f * s.Scale);
             float spacing = Mathf.Max(0f, s.Spacing * s.Scale);
             float radius = Mathf.Max(0f, s.CornerRadius * s.Scale);
             int borderWidth = Mathf.Max(0, Mathf.RoundToInt(2f * s.Scale));
 
-            // With the hands merged, every row is 3 cells + 2 gaps wide.
-            float rowWidth = cell * 3f + spacing * 2f;
-            float blockHeight = cell * 3f + spacing * 2f;
-
             // Bottom-left anchored: (OffsetX, OffsetY) from the bottom-left corner.
             float x = s.OffsetX;
+            float blockHeight = rows.Count * cell + (rows.Count - 1) * spacing;
             float y = Screen.height - s.OffsetY - blockHeight;
 
-            DrawRow(new[] { KeyKind.PlayDead, KeyKind.Forward, KeyKind.LeftHand, KeyKind.RightHand },
-                new[] { 1f, 1f, 0.5f, 0.5f }, x, y, cell, spacing, radius, borderWidth, s.ShowKeyText);
-
-            DrawRow(new[] { KeyKind.Left, KeyKind.Back, KeyKind.Right },
-                new[] { 1f, 1f, 1f }, x, y + cell + spacing, cell, spacing, radius, borderWidth, s.ShowKeyText);
-
-            DrawRow(new[] { KeyKind.Jump },
-                new[] { 3f }, x, y + 2f * (cell + spacing), cell, spacing, radius, borderWidth, s.ShowKeyText);
+            for (int r = 0; r < rows.Count; r++)
+                DrawRow(rows[r], x, y + r * (cell + spacing), cell, spacing, radius, borderWidth, s.ShowKeyText);
         }
 
-        private void DrawRow(KeyKind[] kinds, float[] widths, float x, float y, float cell,
+        private void DrawRow(KeyRow row, float x, float y, float cell,
             float spacing, float radius, int borderWidth, bool showText)
         {
             float cx = x;
-            for (int i = 0; i < kinds.Length; i++)
+            for (int i = 0; i < row.Keys.Count; i++)
             {
-                float drawnWidth;
+                var e = row.Keys[i];
+                float w = KeyWidth(e, cell, spacing);
 
-                if (kinds[i] == KeyKind.LeftHand && i + 1 < kinds.Length && kinds[i + 1] == KeyKind.RightHand)
+                if (e.Blank)
                 {
-                    // Left/right hand are one combined key: one full cell wide,
-                    // no internal gap, shared border/corner/outer spacing.
-                    var rect = new Rect(cx, y, cell, cell);
-                    DrawCombinedHands(rect, cell, radius, borderWidth, showText);
-                    drawnWidth = cell;
-                    i++; // consume the right-hand entry
+                    // Empty slot: reserve the width, draw nothing.
+                    cx += w;
+                    if (i < row.Keys.Count - 1) cx += spacing;
+                    continue;
                 }
+
+                var rect = new Rect(cx, y, w, cell);
+                if (e.Width == 1 && e.Dual)
+                    DrawDualKey(e, rect, cell, radius, borderWidth, showText);
                 else
-                {
-                    float w = cell * widths[i];
-                    if (kinds[i] == KeyKind.Jump)
-                        w += spacing * 2f; // jump matches the 3-cell + 2-gap rows
-                    var rect = new Rect(cx, y, w, cell);
-                    DrawKey(kinds[i], rect, cell, radius, borderWidth, showText);
-                    drawnWidth = w;
-                }
+                    DrawKey(e, rect, cell, radius, borderWidth, showText);
 
-                cx += drawnWidth;
-                if (i < kinds.Length - 1)
+                cx += w;
+                if (i < row.Keys.Count - 1)
                     cx += spacing;
             }
         }
 
-        private void DrawKey(KeyKind kind, Rect rect, float cell, float radius, int borderWidth, bool showText)
+        /// <summary>Width of one key unit: 1 cell, or n cells + (n-1) internal gaps.</summary>
+        private static float KeyWidth(KeyEntry e, float cell, float spacing)
+        {
+            if (e.Width <= 1) return cell;
+            return cell * e.Width + spacing * (e.Width - 1);
+        }
+
+        private void DrawKey(KeyEntry e, Rect rect, float cell, float radius, int borderWidth, bool showText)
         {
             var s = ConfigService.Instance.Settings;
-            float t = _fadeProgress[(int)kind];
+            float t = GetFade(FadeSlot(e, -1));
             var style = LerpStyle(s.Idle, s.Pressed, t);
 
             int tw = Mathf.Max(1, Mathf.RoundToInt(rect.width));
@@ -153,20 +168,15 @@ namespace TwilightInputOverlay
             GUI.DrawTexture(rect, RoundedRectTextureCache.GetBorderMask(tw, th, rad, borderWidth));
             GUI.color = prev;
 
-            if (showText)
-            {
-                // Keep the jump line exactly where it was; only letter labels get
-                // the small vertical lift needed to sit visually centered.
-                bool applyLift = kind != KeyKind.Jump;
-                DrawText(rect, LabelFor(kind), style.Text, cell, applyLift);
-            }
+            if (showText && !string.IsNullOrEmpty(e.Label))
+                DrawText(rect, e.Label, style.Text, cell);
         }
 
-        private void DrawCombinedHands(Rect rect, float cell, float radius, int borderWidth, bool showText)
+        private void DrawDualKey(KeyEntry e, Rect rect, float cell, float radius, int borderWidth, bool showText)
         {
             var s = ConfigService.Instance.Settings;
-            float leftT = _fadeProgress[(int)KeyKind.LeftHand];
-            float rightT = _fadeProgress[(int)KeyKind.RightHand];
+            float leftT = GetFade(FadeSlot(e, 0));
+            float rightT = GetFade(FadeSlot(e, 1));
             var leftStyle = LerpStyle(s.Idle, s.Pressed, leftT);
             var rightStyle = LerpStyle(s.Idle, s.Pressed, rightT);
 
@@ -189,9 +199,17 @@ namespace TwilightInputOverlay
             {
                 var leftRect = new Rect(rect.x, rect.y, rect.width * 0.5f, rect.height);
                 var rightRect = new Rect(rect.x + rect.width * 0.5f, rect.y, rect.width * 0.5f, rect.height);
-                DrawText(leftRect, "L", leftStyle.Text, cell, true);
-                DrawText(rightRect, "R", rightStyle.Text, cell, true);
+                if (!string.IsNullOrEmpty(e.Label))
+                    DrawText(leftRect, e.Label, leftStyle.Text, cell);
+                if (!string.IsNullOrEmpty(e.Label2))
+                    DrawText(rightRect, e.Label2, rightStyle.Text, cell);
             }
+        }
+
+        private float GetFade(int slot)
+        {
+            float v;
+            return _fades.TryGetValue(slot, out v) ? v : 0f;
         }
 
         private static ButtonStyle LerpStyle(ButtonStyle idle, ButtonStyle pressed, float t)
@@ -204,58 +222,23 @@ namespace TwilightInputOverlay
             };
         }
 
-        private void DrawText(Rect rect, string label, Color color, float cell, bool applyLift)
+        private void DrawText(Rect rect, string label, Color color, float cell)
         {
             int fontSize = Mathf.Max(8, Mathf.RoundToInt(cell * 0.5f));
             EnsureFont(fontSize);
             _keyStyle.font = _font;
             _keyStyle.fontSize = fontSize;
 
+            // IMGUI's MiddleCenter tends to sit glyphs slightly low; lift the
+            // label a little so it looks vertically centered.
             Rect textRect = rect;
-            if (applyLift)
-            {
-                // IMGUI's MiddleCenter tends to sit glyphs slightly low; lift
-                // letter labels a little so they look vertically centered.
-                float lift = Mathf.Max(1f, fontSize * 0.06f);
-                textRect.y -= lift;
-            }
+            float lift = Mathf.Max(1f, fontSize * 0.06f);
+            textRect.y -= lift;
 
             Color prev = GUI.color;
             GUI.color = color;
             GUI.Label(textRect, label, _keyStyle);
             GUI.color = prev;
-        }
-
-        private static bool IsPressed(KeyKind kind)
-        {
-            switch (kind)
-            {
-                case KeyKind.PlayDead: return InputState.PlayDead;
-                case KeyKind.Forward: return InputState.Forward;
-                case KeyKind.LeftHand: return InputState.LeftHand;
-                case KeyKind.RightHand: return InputState.RightHand;
-                case KeyKind.Left: return InputState.Left;
-                case KeyKind.Back: return InputState.Back;
-                case KeyKind.Right: return InputState.Right;
-                case KeyKind.Jump: return InputState.Jump;
-                default: return false;
-            }
-        }
-
-        private static string LabelFor(KeyKind kind)
-        {
-            switch (kind)
-            {
-                case KeyKind.PlayDead: return "Y";
-                case KeyKind.Forward: return "W";
-                case KeyKind.LeftHand: return "L";
-                case KeyKind.RightHand: return "R";
-                case KeyKind.Left: return "A";
-                case KeyKind.Back: return "S";
-                case KeyKind.Right: return "D";
-                case KeyKind.Jump: return "—";
-                default: return "";
-            }
         }
 
         private void EnsureFont(int size)

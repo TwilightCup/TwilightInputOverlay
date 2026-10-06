@@ -10,8 +10,33 @@ PANEL_FOOTER:Changes apply immediately and are saved on close.
 # ===== Sub-pages =====
 TAB_KEY_OVERLAY:Key Overlay
 TAB_MOUSE_OVERLAY:Mouse Overlay
+TAB_KEY_LAYOUT:Key Layout
 PANEL_BACK:← Back
 PANEL_SELECT_PAGE:Choose a section to configure:
+
+# ===== Key layout =====
+KEY_LAYOUT_ROWS:Rows
+KEY_LAYOUT_HINT:Rows stack top to bottom in the HUD; keys run left to right.
+KEY_LAYOUT_ROW:Row {0}
+KEY_LAYOUT_EMPTY_ROW:(empty)
+KEY_LAYOUT_ADD_ROW:Add row
+KEY_LAYOUT_DELETE_ROW:Delete row
+KEY_LAYOUT_KEYS:Keys
+KEY_LAYOUT_ADD_KEY:Add key
+KEY_LABEL:Display text
+KEY_LABEL_2:Second text
+KEY_BINDING:Key bind
+KEY_BINDING_2:Second key bind
+KEY_WIDTH:Width
+KEY_DUAL:Dual keybind
+KEY_BLANK:Set blank key
+KEY_BLANK_SHORT:(blank)
+KEY_DELETE:Delete key
+PANEL_CONFIRM_DELETE:Confirm delete
+PANEL_CANCEL:Cancel
+PANEL_MOVE_UP:Up
+PANEL_MOVE_DOWN:Down
+PANEL_PRESS_KEY_CANCEL:Press a key... (Esc cancels)
 
 # ===== General =====
 PANEL_GENERAL:General

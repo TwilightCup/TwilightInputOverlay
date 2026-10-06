@@ -1,38 +1,25 @@
-using System;
 using UnityEngine;
 
 namespace TwilightInputOverlay
 {
     /// <summary>
-    /// Reads the current keyboard/mouse input state for each HUD key. Prefers
-    /// the game's own <see cref="Options.keyboardBindings"/> actions so the HUD
-    /// lights up with the actual bound action (movement, jump, play dead, and
-    /// the left/right hand actions — mouse buttons by default), and falls back
-    /// to the fixed default keys when the bindings are not ready yet.
+    /// Reads the held state of one HUD key's bound <see cref="KeyCode"/>. The
+    /// customizable layout binds each key unit to an explicit key (or mouse
+    /// button), so the HUD reads the raw input directly instead of the game's
+    /// action bindings. Mouse buttons arrive as the Mouse0–Mouse6 KeyCode range;
+    /// route those through <see cref="Input.GetMouseButton"/> because
+    /// <see cref="Input.GetKey"/> is not documented to cover them.
     /// </summary>
     internal static class InputState
     {
-        public static bool Forward => Read(a => a.Forward.IsPressed, () => Input.GetKey(KeyCode.W));
-        public static bool Back => Read(a => a.Back.IsPressed, () => Input.GetKey(KeyCode.S));
-        public static bool Left => Read(a => a.Left.IsPressed, () => Input.GetKey(KeyCode.A));
-        public static bool Right => Read(a => a.Right.IsPressed, () => Input.GetKey(KeyCode.D));
-        public static bool Jump => Read(a => a.Jump.IsPressed, () => Input.GetKey(KeyCode.Space));
-        public static bool PlayDead => Read(a => a.Unconscious.IsPressed, () => Input.GetKey(KeyCode.Y));
-        public static bool LeftHand => Read(a => a.LeftHand.IsPressed, () => Input.GetMouseButton(0));
-        public static bool RightHand => Read(a => a.RightHand.IsPressed, () => Input.GetMouseButton(1));
-
-        private static bool Read(Func<PlayerActions, bool> fromBindings, Func<bool> fallback)
+        /// <summary>Whether the given key or mouse button is currently held.</summary>
+        public static bool IsHeld(KeyCode key)
         {
-            try
-            {
-                if (Options.keyboardBindings != null)
-                    return fromBindings(Options.keyboardBindings);
-            }
-            catch
-            {
-                // Fall through to the fixed defaults.
-            }
-            return fallback();
+            if (key == KeyCode.None) return false;
+            int v = (int)key;
+            if (v >= (int)KeyCode.Mouse0 && v <= (int)KeyCode.Mouse6)
+                return Input.GetMouseButton(v - (int)KeyCode.Mouse0);
+            return Input.GetKey(key);
         }
     }
 }

@@ -14,7 +14,8 @@ A [BepInEx 5](https://docs.bepinex.dev/) plugin for **Human: Fall Flat** that ad
   [  —  ]
   ```
 
-- **Reacts to your real input** — the HUD lights up based on your actual in-game key and mouse bindings, so it keeps working even after you rebind controls. (The on-screen labels stay the standard `W`/`A`/`S`/`D`/`Y`/`L`/`R` letters.)
+- **Reacts to your real input** — the HUD lights up based on the key/mouse bindings of each displayed key.
+- **Fully customizable key layout** — add, remove and reorder rows and keys, pick each key's label and bound key (including a dual keybind like the original `L`/`R` hand key), widen a key like the jump bar, or turn a key into an empty slot that just reserves its space.
 - **Live settings panel** — press `Home` to open it. Every change applies to the HUD immediately.
 - **Fully customizable colors** — edit the text, border, and fill colors for both the *idle* and *pressed* states, using either hex color codes or RGBA sliders.
 - **Layout controls** — show/hide the HUD, toggle the key text, adjust the X/Y offset from the bottom-left corner, scale the whole HUD, and tweak key spacing and corner radius.
