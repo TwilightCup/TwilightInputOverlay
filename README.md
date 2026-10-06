@@ -14,11 +14,13 @@ A [BepInEx 5](https://docs.bepinex.dev/) plugin for **Human: Fall Flat** that ad
   [  —  ]
   ```
 
-- **Reacts to your real input** — the HUD lights up based on your actual in-game key and mouse bindings, so it keeps working even after you rebind controls. (The on-screen labels stay the standard `W`/`A`/`S`/`D`/`Y`/`L`/`R` letters.)
+- **Reacts to your real input** — the HUD lights up based on the key/mouse bindings of each displayed key.
+- **Fully customizable key layout** — add, remove and reorder rows and keys, pick each key's label and bound key (including a dual keybind like the original `L`/`R` hand key), widen a key like the jump bar, or turn a key into an empty slot that just reserves its space.
 - **Live settings panel** — press `Home` to open it. Every change applies to the HUD immediately.
 - **Fully customizable colors** — edit the text, border, and fill colors for both the *idle* and *pressed* states, using either hex color codes or RGBA sliders.
 - **Layout controls** — show/hide the HUD, toggle the key text, adjust the X/Y offset from the bottom-left corner, scale the whole HUD, and tweak key spacing and corner radius.
 - **Smooth key transitions** — keys fade between idle and pressed styles, with a configurable fade speed.
+- **Configuration presets** — save and switch whole config snapshots (mirroring HSRTimer's preset feature) from the settings panel's root page; a `default` preset is created automatically on first load.
 - **Localization** — comes with English and Simplified Chinese, and you can add more languages by dropping in a language file.
 
 ## Requirements
@@ -40,13 +42,13 @@ If HSRTimer or TwilightTimer (the HSRTimer fork) is installed, TwilightInputOver
 
 ### Settings panel
 
-The panel is organized into a few sections:
+The panel opens on a root page: **General** settings (change the settings panel key, switch the language), the **Presets** selector (save/switch whole config snapshots, mirroring HSRTimer's preset feature), and the entry buttons that drill into the sub-pages:
 
-- **General** — change the settings panel key, and switch the language.
-- **HUD** — toggle the HUD on/off, toggle the key text on/off, adjust the X/Y offset, and change the overall scale.
-- **Animation** — adjust the idle/pressed fade speed.
-- **Key Grid** — adjust the spacing between keys and the corner radius of the keys.
-- **Style** — pick the *Idle* or *Pressed* state, then edit the **Text**, **Border**, and **Fill** colors with either hex codes or RGBA sliders.
+- **Key Overlay** — toggle the key-grid HUD and its key text, adjust the X/Y offset, overall scale, fade speed, key spacing and corner radius, and edit the *Idle*/*Pressed* style colors (text, border, fill) with hex codes or RGBA sliders.
+- **Mouse Overlay** — toggle the cursor and its region, raw mouse input, wrap and clamp behavior, and adjust the region position/size/color, cursor size, sensitivity, color, and trail max length/response.
+- **Key Layout** — add, remove and reorder rows and keys, and edit each key's label, bound key, width, dual keybind and blank slot.
+
+Each sub-page has a **← Back** button at the top; the panel always opens on the root page.
 
 Changes are applied immediately and saved automatically when you close the panel or exit the game.
 
@@ -56,6 +58,7 @@ On first run, the plugin creates its config files under `BepInEx/config/Twilight
 
 - `settings.ini` — your saved settings. You can edit it while the game is closed; malformed lines are ignored.
 - `lang/` — language files (`*.txt`). Drop in a new file to add your own translation.
+- `presets/` — configuration presets (one folder per preset, each holding a `settings.ini` snapshot). Managed from the settings panel's root page.
 
 ## License
 

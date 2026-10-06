@@ -37,11 +37,70 @@ namespace TwilightInputOverlay
     }
 
     /// <summary>
+    /// One "key" of the customizable HUD layout: a single displayed unit that
+    /// listens to one key (or, when <see cref="Dual"/> is set and the width is
+    /// 1, two keys shown as two half-width labels like the old left/right hand
+    /// cell). A width &gt; 1 draws one wide cell that absorbs the internal
+    /// spacings (like the old jump/space key). <see cref="Blank"/> turns the
+    /// unit into an empty slot that still reserves its width but has neither
+    /// behaviour nor drawing.
+    /// </summary>
+    public sealed class KeyEntry
+    {
+        /// <summary>Session-unique identity, used by the HUD for fade tracking.</summary>
+        public int Id;
+
+        public string Label = "";
+        public KeyCode Key1 = KeyCode.None;
+
+        /// <summary>Width in grid cells; &gt; 1 behaves like the space key.</summary>
+        public int Width = 1;
+
+        /// <summary>Only effective when <see cref="Width"/> == 1: a second
+        /// label/keybind shown as the right half of the unit.</summary>
+        public bool Dual = false;
+        public string Label2 = "";
+        public KeyCode Key2 = KeyCode.None;
+
+        /// <summary>Empty slot: reserves the width, no behaviour, no drawing.</summary>
+        public bool Blank = false;
+
+        public KeyEntry()
+        {
+            Id = SettingsModel.AllocateKeyId();
+        }
+    }
+
+    /// <summary>One row of the customizable HUD layout: keys run left to right,
+    /// rows stack top to bottom.</summary>
+    public sealed class KeyRow
+    {
+        public List<KeyEntry> Keys = new List<KeyEntry>();
+    }
+
+    /// <summary>
     /// All user-tunable settings for the input overlay. Persisted to
     /// settings.ini as human-readable text; missing keys fall back to defaults.
     /// </summary>
     public sealed class SettingsModel
     {
+        private static int _nextKeyId = 1;
+
+        /// <summary>Monotonic id allocator for key units (never reused within a session).</summary>
+        public static int AllocateKeyId() => _nextKeyId++;
+
+        /// <summary>Bounds for a key's width in grid cells (keeps the HUD and its
+        /// baked textures within sane dimensions).</summary>
+        public const int KeyWidthMin = 1;
+        public const int KeyWidthMax = 32;
+
+        /// <summary>
+        /// The customizable HUD layout: rows top-to-bottom, keys left-to-right.
+        /// Falls back to the fixed classic layout (play dead / forward / hands,
+        /// movement, jump) when the config has no row sections.
+        /// </summary>
+        public List<KeyRow> Rows = new List<KeyRow>();
+
         public bool ShowHud = true;
         public bool ShowKeyText = true;
 
@@ -69,6 +128,9 @@ namespace TwilightInputOverlay
         public bool CursorRawInput = true;
         // true = leave the region from the opposite edge; false = snap back to the centre.
         public bool CursorWrap = true;
+        // true = clamp the cursor to the region bounds so it never leaves the
+        // region (it stops at the edge); takes precedence over CursorWrap.
+        public bool CursorClamp = false;
         // Region rectangle, anchored to the screen's bottom-right corner, so
         // CursorRegionX is the distance from the right edge and CursorRegionY
         // the distance from the bottom edge.
@@ -88,24 +150,166 @@ namespace TwilightInputOverlay
 
         public string CurrentLang = "en";
 
+        // ── Presets (R11) ───────────────────────────────────────────────
+        // The currently selected preset. The selection itself is a normal config
+        // item ([Presets] Current) so it survives restarts; there is
+        // intentionally NO separate "presets initialized" flag (first-load /
+        // upgrade is detected by the presence of the presets directory and the
+        // default preset, see PresetStore.EnsureInitialized).
+        public string CurrentPreset = PresetStore.DefaultPresetName;
+
         public ButtonStyle Idle = ButtonStyle.DefaultIdle();
         public ButtonStyle Pressed = ButtonStyle.DefaultPressed();
 
         private const string MainSection = "settings";
         private const string IdleSection = "idle";
         private const string PressedSection = "pressed";
+        private const string PresetsSection = "Presets";
 
         public void Load()
         {
+            // Idempotent: Rows are rebuilt from the file below, so a preset
+            // load can call Load() again without stale rows/keys surviving.
+            Rows.Clear();
+
+            int rowCount = -1;      // -1 = not specified by the file
+            bool sawRowSection = false;
+
             foreach (var p in PersistenceService.Read(PersistenceService.PathFor("settings.ini")))
             {
                 if (p.Section == MainSection)
+                {
+                    // row_count lives in the main section but is applied to the
+                    // layout, not to a scalar setting.
+                    if (p.Key == "row_count")
+                    {
+                        int rc;
+                        if (int.TryParse(p.Value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out rc) && rc >= 0)
+                            rowCount = rc;
+                        continue;
+                    }
                     Apply(p.Key, p.Value);
+                }
                 else if (p.Section == IdleSection)
                     ApplyStyle(Idle, p.Key, p.Value, IdleSection);
                 else if (p.Section == PressedSection)
                     ApplyStyle(Pressed, p.Key, p.Value, PressedSection);
+                else if (p.Section == PresetsSection)
+                    ApplyPresets(p.Key, p.Value);
+                else if (IsRowSection(p.Section))
+                {
+                    sawRowSection = true;
+                    ApplyRow(p.Section, p.Key, p.Value);
+                }
             }
+
+            if (rowCount >= 0)
+            {
+                // Explicit count wins (covers the "all rows deleted" case where
+                // there are no row sections left to trigger a default fallback).
+                while (Rows.Count < rowCount) Rows.Add(new KeyRow());
+                if (Rows.Count > rowCount) Rows.RemoveRange(rowCount, Rows.Count - rowCount);
+            }
+            else if (!sawRowSection)
+            {
+                DefaultLayout();
+            }
+        }
+
+        /// <summary>Seed the classic fixed HUD as the default custom layout.</summary>
+        private void DefaultLayout()
+        {
+            Rows.Clear();
+
+            var row0 = new KeyRow();
+            row0.Keys.Add(NewKey("Y", KeyCode.Y, 1, false, "", KeyCode.None));
+            row0.Keys.Add(NewKey("W", KeyCode.W, 1, false, "", KeyCode.None));
+            row0.Keys.Add(NewKey("L", KeyCode.Mouse0, 1, true, "R", KeyCode.Mouse1)); // hands
+            Rows.Add(row0);
+
+            var row1 = new KeyRow();
+            row1.Keys.Add(NewKey("A", KeyCode.A, 1, false, "", KeyCode.None));
+            row1.Keys.Add(NewKey("S", KeyCode.S, 1, false, "", KeyCode.None));
+            row1.Keys.Add(NewKey("D", KeyCode.D, 1, false, "", KeyCode.None));
+            Rows.Add(row1);
+
+            var row2 = new KeyRow();
+            row2.Keys.Add(NewKey("—", KeyCode.Space, 3, false, "", KeyCode.None)); // jump
+            Rows.Add(row2);
+        }
+
+        private static KeyEntry NewKey(string label, KeyCode key1, int width, bool dual, string label2, KeyCode key2)
+        {
+            return new KeyEntry
+            {
+                Label = label,
+                Key1 = key1,
+                Width = width,
+                Dual = dual,
+                Label2 = label2,
+                Key2 = key2,
+            };
+        }
+
+        private static bool IsRowSection(string section)
+        {
+            if (string.IsNullOrEmpty(section) || section.Length < 4)
+                return false;
+            if (section[0] != 'r' || section[1] != 'o' || section[2] != 'w')
+                return false;
+            for (int i = 3; i < section.Length; i++)
+                if (!char.IsDigit(section[i]))
+                    return false;
+            return true;
+        }
+
+        private void ApplyRow(string section, string key, string value)
+        {
+            try
+            {
+                int rowIndex = int.Parse(section.Substring(3), CultureInfo.InvariantCulture);
+                if (rowIndex < 0) return;
+                while (Rows.Count <= rowIndex) Rows.Add(new KeyRow());
+                var row = Rows[rowIndex];
+
+                // key format: key{N}_{field}
+                if (key.Length < 7 || key[0] != 'k' || key[1] != 'e' || key[2] != 'y')
+                    return;
+                int underscore = key.IndexOf('_');
+                if (underscore <= 3 || underscore >= key.Length - 1)
+                    return;
+                int keyIndex;
+                if (!int.TryParse(key.Substring(3, underscore - 3), NumberStyles.Integer, CultureInfo.InvariantCulture, out keyIndex))
+                    return;
+                if (keyIndex < 0) return;
+                while (row.Keys.Count <= keyIndex) row.Keys.Add(new KeyEntry());
+                var e = row.Keys[keyIndex];
+
+                switch (key.Substring(underscore + 1))
+                {
+                    case "label": e.Label = SingleChar(value); break;
+                    case "key1": e.Key1 = ParseKeyCode(value, e.Key1); break;
+                    case "width": e.Width = Mathf.Clamp(ParseInt(value, e.Width), KeyWidthMin, KeyWidthMax); break;
+                    case "dual": e.Dual = ParseBool(value, e.Dual); break;
+                    case "label2": e.Label2 = SingleChar(value); break;
+                    case "key2": e.Key2 = ParseKeyCode(value, e.Key2); break;
+                    case "blank": e.Blank = ParseBool(value, e.Blank); break;
+                    default:
+                        Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: unknown row key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: bad row line '{key}' = '{value}', ignored.");
+            }
+        }
+
+        /// <summary>Labels are single characters; keep only the first UTF-16 unit.</summary>
+        private static string SingleChar(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            return value.Length > 1 ? value.Substring(0, 1) : value;
         }
 
         private void Apply(string key, string value)
@@ -126,6 +330,7 @@ namespace TwilightInputOverlay
                     case "show_cursor_region": ShowCursorRegion = ParseBool(value, ShowCursorRegion); break;
                     case "cursor_raw_input": CursorRawInput = ParseBool(value, CursorRawInput); break;
                     case "cursor_wrap": CursorWrap = ParseBool(value, CursorWrap); break;
+                    case "cursor_clamp": CursorClamp = ParseBool(value, CursorClamp); break;
                     case "cursor_region_x": CursorRegionX = ParseFloat(value, CursorRegionX); break;
                     case "cursor_region_y": CursorRegionY = ParseFloat(value, CursorRegionY); break;
                     case "cursor_region_width": CursorRegionWidth = Mathf.Max(1f, ParseFloat(value, CursorRegionWidth)); break;
@@ -169,7 +374,43 @@ namespace TwilightInputOverlay
             }
         }
 
+        private void ApplyPresets(string key, string value)
+        {
+            try
+            {
+                switch (key)
+                {
+                    case "Current": CurrentPreset = string.IsNullOrEmpty(value) ? PresetStore.DefaultPresetName : value; break;
+                    default:
+                        Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: unknown Presets key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: bad Presets value for '{key}' = '{value}', kept default.");
+            }
+        }
+
         public void Save()
+        {
+            WriteTo(PersistenceService.PathFor("settings.ini"), fullConfig: true);
+        }
+
+        /// <summary>
+        /// Write the whole configuration to <paramref name="path"/>, used by
+        /// <see cref="PresetStore"/> to snapshot the current config into a preset
+        /// folder. Global preferences are intentionally left out of snapshots so
+        /// loading a preset never changes them: the UI language, the standalone
+        /// panel hotkey, and the [Presets] selection itself (a snapshot must not
+        /// be able to re-select another preset).
+        /// </summary>
+        public void SaveTo(string path)
+        {
+            WriteTo(path, fullConfig: false);
+        }
+
+        private void WriteTo(string path, bool fullConfig)
         {
             var main = new Dictionary<string, string>
             {
@@ -185,6 +426,7 @@ namespace TwilightInputOverlay
                 ["show_cursor_region"] = ShowCursorRegion ? "true" : "false",
                 ["cursor_raw_input"] = CursorRawInput ? "true" : "false",
                 ["cursor_wrap"] = CursorWrap ? "true" : "false",
+                ["cursor_clamp"] = CursorClamp ? "true" : "false",
                 ["cursor_region_x"] = CursorRegionX.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_region_y"] = CursorRegionY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_region_width"] = CursorRegionWidth.ToString("0.###", CultureInfo.InvariantCulture),
@@ -197,18 +439,56 @@ namespace TwilightInputOverlay
                 ["cursor_color"] = ColorUtil.ToHex(CursorColor),
                 ["panel_key"] = PanelKey.ToString(),
                 ["language"] = CurrentLang,
+                ["row_count"] = Rows.Count.ToString(CultureInfo.InvariantCulture),
             };
+            if (!fullConfig)
+            {
+                // Preset snapshots keep the global preferences (UI language,
+                // panel hotkey) out, as documented on SaveTo.
+                main.Remove("panel_key");
+                main.Remove("language");
+            }
             var idle = StyleSection(Idle);
             var pressed = StyleSection(Pressed);
 
-            PersistenceService.Write(
-                PersistenceService.PathFor("settings.ini"),
-                new[]
+            var sections = new List<KeyValuePair<string, IDictionary<string, string>>>
+            {
+                new KeyValuePair<string, IDictionary<string, string>>(MainSection, main),
+                new KeyValuePair<string, IDictionary<string, string>>(IdleSection, idle),
+                new KeyValuePair<string, IDictionary<string, string>>(PressedSection, pressed),
+            };
+
+            for (int r = 0; r < Rows.Count; r++)
+            {
+                var row = Rows[r];
+                var d = new Dictionary<string, string>();
+                for (int k = 0; k < row.Keys.Count; k++)
                 {
-                    new KeyValuePair<string, IDictionary<string, string>>(MainSection, main),
-                    new KeyValuePair<string, IDictionary<string, string>>(IdleSection, idle),
-                    new KeyValuePair<string, IDictionary<string, string>>(PressedSection, pressed),
-                },
+                    var e = row.Keys[k];
+                    string prefix = "key" + k + "_";
+                    d[prefix + "label"] = e.Label;
+                    d[prefix + "key1"] = e.Key1.ToString();
+                    d[prefix + "width"] = e.Width.ToString(CultureInfo.InvariantCulture);
+                    d[prefix + "dual"] = e.Dual ? "true" : "false";
+                    d[prefix + "label2"] = e.Label2;
+                    d[prefix + "key2"] = e.Key2.ToString();
+                    d[prefix + "blank"] = e.Blank ? "true" : "false";
+                }
+                sections.Add(new KeyValuePair<string, IDictionary<string, string>>("row" + r, d));
+            }
+
+            if (fullConfig)
+            {
+                var presets = new Dictionary<string, string>
+                {
+                    ["Current"] = string.IsNullOrEmpty(CurrentPreset) ? PresetStore.DefaultPresetName : CurrentPreset,
+                };
+                sections.Add(new KeyValuePair<string, IDictionary<string, string>>(PresetsSection, presets));
+            }
+
+            PersistenceService.Write(
+                path,
+                sections,
                 "TwilightInputOverlay settings. Lines of the form 'key = value'. Bad lines are ignored.");
         }
 
@@ -243,6 +523,12 @@ namespace TwilightInputOverlay
             if (string.IsNullOrEmpty(s)) return fallback;
             return float.TryParse(s.Trim(), System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out float f) ? f : fallback;
+        }
+
+        public static int ParseInt(string s, int fallback)
+        {
+            if (string.IsNullOrEmpty(s)) return fallback;
+            return int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : fallback;
         }
     }
 }

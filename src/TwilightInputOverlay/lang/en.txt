@@ -7,6 +7,37 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply immediately and are saved on close.
 
+# ===== Sub-pages =====
+TAB_KEY_OVERLAY:Key Overlay
+TAB_MOUSE_OVERLAY:Mouse Overlay
+TAB_KEY_LAYOUT:Key Layout
+PANEL_BACK:← Back
+PANEL_SELECT_PAGE:Choose a section to configure:
+
+# ===== Key layout =====
+KEY_LAYOUT_ROWS:Rows
+KEY_LAYOUT_HINT:Rows stack top to bottom in the HUD; keys run left to right.
+KEY_LAYOUT_ROW:Row {0}
+KEY_LAYOUT_EMPTY_ROW:(empty)
+KEY_LAYOUT_ADD_ROW:Add row
+KEY_LAYOUT_DELETE_ROW:Delete row
+KEY_LAYOUT_KEYS:Keys
+KEY_LAYOUT_ADD_KEY:Add key
+KEY_LABEL:Display text
+KEY_LABEL_2:Second text
+KEY_BINDING:Key bind
+KEY_BINDING_2:Second key bind
+KEY_WIDTH:Width
+KEY_DUAL:Dual keybind
+KEY_BLANK:Set blank key
+KEY_BLANK_SHORT:(blank)
+KEY_DELETE:Delete key
+PANEL_CONFIRM_DELETE:Confirm delete
+PANEL_CANCEL:Cancel
+PANEL_MOVE_UP:Up
+PANEL_MOVE_DOWN:Down
+PANEL_PRESS_KEY_CANCEL:Press a key... (Esc cancels)
+
 # ===== General =====
 PANEL_GENERAL:General
 SETTINGS_PANEL_KEY:Settings Panel Key
@@ -14,6 +45,24 @@ PANEL_PRESS_KEY:Press a key...
 SETTINGS_LANGUAGE:Language
 PANEL_RELOAD_LANGUAGE:Reload language files
 PANEL_LANG_SELECT_HINT:▼
+
+# ===== Presets =====
+SETTINGS_PRESET:Presets
+SETTINGS_PRESET_SELECT_HINT:[Click to select]
+SETTINGS_PRESET_NEW:New preset
+SETTINGS_PRESET_NEW_NAME:Preset name
+SETTINGS_PRESET_CONFIRM:OK
+SETTINGS_PRESET_CANCEL:Cancel
+SETTINGS_PRESET_LOAD:Load preset
+SETTINGS_PRESET_SAVE:Save preset
+SETTINGS_PRESET_DELETE:Delete preset
+SETTINGS_PRESET_DELETE_CONFIRM:Confirm delete
+SETTINGS_PRESET_EMPTY:Preset name cannot be empty.
+SETTINGS_PRESET_DUPLICATE:A preset with this name already exists.
+SETTINGS_PRESET_LOAD_FAILED:Failed to load the selected preset.
+SETTINGS_PRESET_SAVE_FAILED:Failed to save the selected preset.
+SETTINGS_PRESET_DELETE_FAILED:Failed to delete the selected preset.
+SETTINGS_PRESET_FAILED:Preset operation failed.
 
 # ===== HUD =====
 PANEL_HUD:HUD
@@ -37,6 +86,7 @@ PANEL_CURSOR:Mouse Cursor
 SETTINGS_SHOW_CURSOR:Show cursor
 SETTINGS_SHOW_CURSOR_REGION:Show region
 SETTINGS_CURSOR_RAW_INPUT:Use raw mouse input (keeps moving at screen edges)
+SETTINGS_CURSOR_CLAMP:Clamp cursor inside region (stops at edge)
 SETTINGS_CURSOR_WRAP:Wrap to opposite edge (off: return to centre)
 PANEL_CURSOR_REGION_X:Region X (from right)
 PANEL_CURSOR_REGION_Y:Region Y (from bottom)

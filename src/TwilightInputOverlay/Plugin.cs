@@ -30,6 +30,10 @@ namespace TwilightInputOverlay
             config.EnsureDefaultLangFiles();
             config.Load();
 
+            // Presets (mirroring HSRTimer's R11 feature): create and select the
+            // default preset on first load / upgrade; repair a missing selection.
+            PresetStore.EnsureInitialized(config);
+
             // 2. HUD singleton, persistent across scene loads.
             var hudGo = new GameObject("TwilightInputOverlay.Hud");
             Object.DontDestroyOnLoad(hudGo);
