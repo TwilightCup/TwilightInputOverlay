@@ -588,7 +588,10 @@ namespace TwilightInputOverlay
         /// Capture the press for an in-progress rebind. Runs at the very top of
         /// <see cref="Draw"/> so no other control consumes the event first.
         /// Keyboard keys bind on KeyDown; mouse buttons (including left/right,
-        /// needed for the hand keys) bind on MouseDown. Escape cancels.
+        /// needed for the hand keys) bind on MouseDown. Unity's IMGUI event
+        /// stream only reports mouse buttons 0-2, so the side buttons (Mouse3+)
+        /// are captured by polling in <see cref="CapturePolledMouseButton"/>.
+        /// Escape cancels.
         /// </summary>
         private static void CapturePendingRebind()
         {
@@ -617,6 +620,32 @@ namespace TwilightInputOverlay
                 {
                     ApplyPending(pressed);
                     Event.current.Use();
+                }
+            }
+
+            // IMGUI events never carry mouse buttons 3+ (the side buttons), so a
+            // mouse-armed rebind must also poll the raw button state to catch them.
+            if (_pendingAllowMouse && _pendingRebind != null)
+                CapturePolledMouseButton();
+        }
+
+        /// <summary>
+        /// Unity's IMGUI event stream only carries mouse buttons 0-2 (left,
+        /// right, middle); the extra buttons (XButton1/XButton2 and beyond,
+        /// KeyCode.Mouse3-Mouse6) never arrive as an
+        /// <see cref="EventType.MouseDown"/>. Poll the raw button state instead.
+        /// <see cref="Input.GetMouseButtonDown"/> is true for exactly one frame,
+        /// so each press is applied once. Runs only while a mouse-armed rebind is
+        /// pending; buttons 0-2 are already handled by the event path above.
+        /// </summary>
+        private static void CapturePolledMouseButton()
+        {
+            for (int button = 3; button <= 6; button++)
+            {
+                if (Input.GetMouseButtonDown(button))
+                {
+                    ApplyPending((KeyCode)((int)KeyCode.Mouse0 + button));
+                    break;
                 }
             }
         }
