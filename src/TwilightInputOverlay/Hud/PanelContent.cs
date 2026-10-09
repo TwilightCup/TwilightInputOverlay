@@ -256,9 +256,9 @@ namespace TwilightInputOverlay
             Section(loc.Get("PANEL_RAINING"));
             GUILayout.Label(loc.Get("SETTINGS_RAINING_HINT"), PanelStyles.Small);
             s.RainingEnabled = Toggle(loc.Get("SETTINGS_RAINING_ENABLED"), s.RainingEnabled);
-            s.RainingHeight = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_RAINING_HEIGHT"), s.RainingHeight, 1f, 500f));
-            s.RainingGap = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_GAP"), s.RainingGap, 0f, 200f));
-            s.RainingSpeed = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_SPEED"), s.RainingSpeed, 1f, 1000f));
+            s.RainingHeight = IntFieldRow(loc.Get("SETTINGS_RAINING_HEIGHT"), s.RainingHeight, "raining:height", 1, 500);
+            s.RainingGap = IntFieldRow(loc.Get("SETTINGS_RAINING_GAP"), s.RainingGap, "raining:gap", 0, 200);
+            s.RainingSpeed = IntFieldRow(loc.Get("SETTINGS_RAINING_SPEED"), s.RainingSpeed, "raining:speed", 1, 1000);
             s.RainingWidth = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_RAINING_WIDTH"), s.RainingWidth, "0.##"));
             s.RainingRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_RADIUS"), s.RainingRadius, 0f, 24f));
             ColorRow(loc, "PANEL_RAINING_COLOR", s.RainingColor, c => s.RainingColor = c);

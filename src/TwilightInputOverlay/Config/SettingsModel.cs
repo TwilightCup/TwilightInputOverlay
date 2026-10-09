@@ -162,9 +162,9 @@ namespace TwilightInputOverlay
         // passes the region's top edge, then it disappears. All these values
         // are HUD-space and scale with Scale, like spacing / corner radius.
         public bool RainingEnabled = false;
-        public float RainingHeight = 160f;   // region height (HUD units)
-        public float RainingGap = 0f;        // region bottom edge vs key tops (HUD units)
-        public float RainingSpeed = 200f;    // flow speed (HUD units / second)
+        public int RainingHeight = 160;   // region height (HUD units)
+        public int RainingGap = 0;        // region bottom edge vs key tops (HUD units)
+        public int RainingSpeed = 200;    // flow speed (HUD units / second)
         public float RainingWidth = 0f;      // 0 = match the key's own width
         public float RainingRadius = 0f;     // bar corner radius (HUD units); 0 = square
         public Color RainingColor = new Color(1f, 1f, 1f, 1f);
@@ -375,9 +375,9 @@ namespace TwilightInputOverlay
                     case "trail_response": TrailResponse = Mathf.Max(0f, ParseFloat(value, TrailResponse)); break;
                     case "cursor_color": CursorColor = ColorUtil.ParseColor(value, CursorColor); break;
                     case "raining_enabled": RainingEnabled = ParseBool(value, RainingEnabled); break;
-                    case "raining_height": RainingHeight = Mathf.Max(1f, ParseFloat(value, RainingHeight)); break;
-                    case "raining_gap": RainingGap = Mathf.Max(0f, ParseFloat(value, RainingGap)); break;
-                    case "raining_speed": RainingSpeed = Mathf.Max(0f, ParseFloat(value, RainingSpeed)); break;
+                    case "raining_height": RainingHeight = Mathf.Max(1, ParseInt(value, RainingHeight)); break;
+                    case "raining_gap": RainingGap = Mathf.Max(0, ParseInt(value, RainingGap)); break;
+                    case "raining_speed": RainingSpeed = Mathf.Max(0, ParseInt(value, RainingSpeed)); break;
                     case "raining_width": RainingWidth = Mathf.Max(0f, ParseFloat(value, RainingWidth)); break;
                     case "raining_radius": RainingRadius = Mathf.Max(0f, ParseFloat(value, RainingRadius)); break;
                     case "raining_color": RainingColor = ColorUtil.ParseColor(value, RainingColor); break;
@@ -482,9 +482,9 @@ namespace TwilightInputOverlay
                 ["trail_response"] = TrailResponse.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_color"] = ColorUtil.ToHex(CursorColor),
                 ["raining_enabled"] = RainingEnabled ? "true" : "false",
-                ["raining_height"] = RainingHeight.ToString("0.###", CultureInfo.InvariantCulture),
-                ["raining_gap"] = RainingGap.ToString("0.###", CultureInfo.InvariantCulture),
-                ["raining_speed"] = RainingSpeed.ToString("0.###", CultureInfo.InvariantCulture),
+                ["raining_height"] = RainingHeight.ToString(CultureInfo.InvariantCulture),
+                ["raining_gap"] = RainingGap.ToString(CultureInfo.InvariantCulture),
+                ["raining_speed"] = RainingSpeed.ToString(CultureInfo.InvariantCulture),
                 ["raining_width"] = RainingWidth.ToString("0.###", CultureInfo.InvariantCulture),
                 ["raining_radius"] = RainingRadius.ToString("0.###", CultureInfo.InvariantCulture),
                 ["raining_color"] = ColorUtil.ToHex(RainingColor),
