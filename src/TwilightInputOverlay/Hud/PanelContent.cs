@@ -33,6 +33,7 @@ namespace TwilightInputOverlay
             Root,
             KeyOverlay,
             MouseOverlay,
+            RainingKeys,
             KeyLayout,
         }
 
@@ -119,6 +120,9 @@ namespace TwilightInputOverlay
                 case SubPage.MouseOverlay:
                     DrawMouseOverlayPage(loc, cfg);
                     return;
+                case SubPage.RainingKeys:
+                    DrawRainingKeysPage(loc, cfg);
+                    return;
                 case SubPage.KeyLayout:
                     if (_activeRow >= 0 && _activeRow < s.Rows.Count)
                     {
@@ -149,6 +153,10 @@ namespace TwilightInputOverlay
                 }
             }
 
+            // Diagnostics toggle (plugin-specific, available in both modes).
+            Section(loc.Get("PANEL_DEBUG"));
+            s.DebugInfo = Toggle(loc.Get("SETTINGS_DEBUG_INFO"), s.DebugInfo);
+
             Section(loc.Get("SETTINGS_PRESET"));
             DrawPresetSelector(cfg, loc);
 
@@ -158,6 +166,8 @@ namespace TwilightInputOverlay
                 _subPage = SubPage.KeyOverlay;
             if (GUILayout.Button(loc.Get("TAB_MOUSE_OVERLAY"), PanelStyles.Button))
                 _subPage = SubPage.MouseOverlay;
+            if (GUILayout.Button(loc.Get("TAB_RAINING_KEYS"), PanelStyles.Button))
+                _subPage = SubPage.RainingKeys;
             if (GUILayout.Button(loc.Get("TAB_KEY_LAYOUT"), PanelStyles.Button))
                 _subPage = SubPage.KeyLayout;
         }
@@ -230,6 +240,28 @@ namespace TwilightInputOverlay
             s.TrailMaxStretch = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_TRAIL_STRETCH"), s.TrailMaxStretch, 1f, 4f));
             s.TrailResponse = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_TRAIL_RESPONSE"), s.TrailResponse, 0f, 30f));
             ColorRow(loc, "PANEL_CURSOR_COLOR", s.CursorColor, c => s.CursorColor = c);
+        }
+
+        // ── Sub-page: Raining Keys (bars rising from the first row) ──
+        private static void DrawRainingKeysPage(LocalizationService loc, ConfigService cfg)
+        {
+            var s = cfg.Settings;
+            GUILayout.Space(6);
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), PanelStyles.Button))
+            {
+                _subPage = SubPage.Root;
+                return; // stop rendering the sub-page this frame
+            }
+
+            Section(loc.Get("PANEL_RAINING"));
+            GUILayout.Label(loc.Get("SETTINGS_RAINING_HINT"), PanelStyles.Small);
+            s.RainingEnabled = Toggle(loc.Get("SETTINGS_RAINING_ENABLED"), s.RainingEnabled);
+            s.RainingHeight = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_RAINING_HEIGHT"), s.RainingHeight, 1f, 500f));
+            s.RainingGap = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_GAP"), s.RainingGap, 0f, 200f));
+            s.RainingSpeed = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_SPEED"), s.RainingSpeed, 1f, 1000f));
+            s.RainingWidth = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_RAINING_WIDTH"), s.RainingWidth, "0.##"));
+            s.RainingRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_RADIUS"), s.RainingRadius, 0f, 24f));
+            ColorRow(loc, "PANEL_RAINING_COLOR", s.RainingColor, c => s.RainingColor = c);
         }
 
         // ── Sub-page: Key Layout (the customizable key layout) ──

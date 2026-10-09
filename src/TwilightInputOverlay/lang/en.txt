@@ -10,6 +10,7 @@ PANEL_FOOTER:Changes apply immediately and are saved on close.
 # ===== Sub-pages =====
 TAB_KEY_OVERLAY:Key Overlay
 TAB_MOUSE_OVERLAY:Mouse Overlay
+TAB_RAINING_KEYS:Raining Keys
 TAB_KEY_LAYOUT:Key Layout
 PANEL_BACK:← Back
 PANEL_SELECT_PAGE:Choose a section to configure:
@@ -101,6 +102,21 @@ SETTINGS_CURSOR_SENSITIVITY:Cursor Sensitivity
 PANEL_CURSOR_COLOR:Cursor Color
 SETTINGS_TRAIL_STRETCH:Trail Max Length
 SETTINGS_TRAIL_RESPONSE:Trail Response
+
+# ===== Raining Keys =====
+PANEL_RAINING:Raining Keys
+SETTINGS_RAINING_ENABLED:Enable Raining Keys
+SETTINGS_RAINING_HINT:Applies to the top row of the key layout only.
+SETTINGS_RAINING_HEIGHT:Bar Area Height
+SETTINGS_RAINING_GAP:Bar Area Gap (from key tops)
+SETTINGS_RAINING_SPEED:Flow Speed
+SETTINGS_RAINING_WIDTH:Bar Width (0 = match key width)
+SETTINGS_RAINING_RADIUS:Bar Corner Radius
+PANEL_RAINING_COLOR:Bar Color
+
+# ===== Debug =====
+PANEL_DEBUG:Debug
+SETTINGS_DEBUG_INFO:Log Raining Keys debug stats (bars, texture cache, memory)
 
 # ===== Style =====
 PANEL_STYLE:Style
