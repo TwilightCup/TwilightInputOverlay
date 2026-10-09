@@ -6,7 +6,7 @@
 - **Highlights**: Placeholder
 - **Details**:
   - Added key-text size and position options to the Key Overlay page: a slider controls the label size (as a fraction of the grid cell), and X/Y number inputs move each label relative to a fixed origin at its key's centre.
-  - New **Raining Keys** effect: pressing a key of the top HUD row grows a bar that rises from the top of that key, clipped to a configurable area above the row; on release the bar keeps scrolling up until it leaves the area. Dual keys spawn one bar per half, and re-pressing during the scroll spawns another bar. Configured on its own settings sub-page (enable, area height, gap from the key tops, flow speed, width, corner radius, color).
+  - New **Raining Keys** effect: pressing a key of the top HUD row grows a bar that rises from the top of that key, clipped to a configurable area above the row; on release the bar keeps scrolling up until it leaves the area. Dual keys spawn one bar per half (a fixed bar width is split evenly between the two halves, which stay adjacent and centred on the key), and re-pressing during the scroll spawns another bar. Configured on its own settings sub-page (enable, area height, gap from the key tops, flow speed, width, corner radius, color).
   - Added a **Debug** toggle on the settings panel's root page: while enabled, Raining Keys logs a stats line once per second (bar count, tallest bar, texture-cache bake rates, managed memory) to help diagnose issues.
 - **Contributors**: Placeholder
 

@@ -16,8 +16,10 @@ namespace TwilightInputOverlay
     /// whose height is <see cref="SettingsModel.RainingHeight"/> and whose bottom edge sits
     /// <see cref="SettingsModel.RainingGap"/> above the key tops; the region itself is not
     /// drawn. A width-1 dual key spawns one bar per half (each listening to its own keybind),
-    /// like the per-half pressed style of the HUD keys. A bar's width defaults to the width
-    /// of the key (or half-key) it rises from; a fixed width can be configured instead.
+    /// like the per-half pressed style of the HUD keys; a configured fixed width is split in
+    /// two, so each half bar is half the width and the two halves stay adjacent with their
+    /// seam at the key's centre. A single bar's width defaults to the width of the key it
+    /// rises from; a fixed width can be configured instead.
     /// Bars are plain rectangles by default, or rounded rectangles when
     /// <see cref="SettingsModel.RainingRadius"/> &gt; 0. All Raining Keys values are
     /// HUD-space and scale with <see cref="SettingsModel.Scale"/>.
@@ -290,10 +292,16 @@ namespace TwilightInputOverlay
                         if (e.Width == 1 && e.Dual)
                         {
                             Rain left, right;
+                            // A dual key splits the configured bar width in two: each
+                            // half bar is half the width and the two halves stay adjacent,
+                            // their seam at the key's centre (auto width = key half,
+                            // which gives the same result as before).
+                            float halfW = fixedWidth > 0f ? fixedWidth * 0.5f : w * 0.5f;
+                            float keyCenter = cx + w * 0.5f;
                             if (_rains.TryGetValue(SlotOf(e, 0), out left))
-                                DrawBars(left, cx + w * 0.25f, fixedWidth > 0f ? fixedWidth : w * 0.5f, radius, regionScreenTop);
+                                DrawBars(left, keyCenter - halfW * 0.5f, halfW, radius, regionScreenTop);
                             if (_rains.TryGetValue(SlotOf(e, 1), out right))
-                                DrawBars(right, cx + w * 0.75f, fixedWidth > 0f ? fixedWidth : w * 0.5f, radius, regionScreenTop);
+                                DrawBars(right, keyCenter + halfW * 0.5f, halfW, radius, regionScreenTop);
                         }
                         else
                         {
