@@ -104,6 +104,15 @@ namespace TwilightInputOverlay
         public bool ShowHud = true;
         public bool ShowKeyText = true;
 
+        // Key text: font size as a fraction of one grid cell (0.5 = the classic
+        // size), and the label's offset from the text origin — a fixed point
+        // just above each key's centre (positive X = right, positive Y = up;
+        // see InputHud.TextOriginY). The offsets scale with the HUD like the
+        // other geometry values so the text stays proportionally placed.
+        public float KeyTextSize = 0.5f;
+        public float KeyTextOffsetX = 0f;
+        public float KeyTextOffsetY = 0f;
+
         // Bottom-left anchored HUD placement/scaling.
         public float OffsetX = 16f;
         public float OffsetY = 16f;
@@ -320,6 +329,9 @@ namespace TwilightInputOverlay
                 {
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_key_text": ShowKeyText = ParseBool(value, ShowKeyText); break;
+                    case "key_text_size": KeyTextSize = Mathf.Clamp(ParseFloat(value, KeyTextSize), 0.1f, 1.5f); break;
+                    case "key_text_offset_x": KeyTextOffsetX = ParseFloat(value, KeyTextOffsetX); break;
+                    case "key_text_offset_y": KeyTextOffsetY = ParseFloat(value, KeyTextOffsetY); break;
                     case "offset_x": OffsetX = ParseFloat(value, OffsetX); break;
                     case "offset_y": OffsetY = ParseFloat(value, OffsetY); break;
                     case "scale": Scale = Mathf.Max(0.1f, ParseFloat(value, Scale)); break;
@@ -416,6 +428,9 @@ namespace TwilightInputOverlay
             {
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_key_text"] = ShowKeyText ? "true" : "false",
+                ["key_text_size"] = KeyTextSize.ToString("0.###", CultureInfo.InvariantCulture),
+                ["key_text_offset_x"] = KeyTextOffsetX.ToString("0.###", CultureInfo.InvariantCulture),
+                ["key_text_offset_y"] = KeyTextOffsetY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["offset_x"] = OffsetX.ToString("0.###", CultureInfo.InvariantCulture),
                 ["offset_y"] = OffsetY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["scale"] = Scale.ToString("0.###", CultureInfo.InvariantCulture),

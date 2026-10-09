@@ -176,6 +176,9 @@ namespace TwilightInputOverlay
             Section(loc.Get("PANEL_HUD"));
             s.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), s.ShowHud);
             s.ShowKeyText = Toggle(loc.Get("SETTINGS_SHOW_KEY_TEXT"), s.ShowKeyText);
+            s.KeyTextSize = Mathf.Clamp(SliderRow(loc.Get("SETTINGS_KEY_TEXT_SIZE"), s.KeyTextSize, 0.1f, 1.5f), 0.1f, 1.5f);
+            s.KeyTextOffsetX = FloatFieldRow(loc.Get("SETTINGS_KEY_TEXT_OFFSET_X"), s.KeyTextOffsetX, "0.##");
+            s.KeyTextOffsetY = FloatFieldRow(loc.Get("SETTINGS_KEY_TEXT_OFFSET_Y"), s.KeyTextOffsetY, "0.##");
             s.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), s.OffsetX, "0.##");
             s.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), s.OffsetY, "0.##");
             s.Scale = Mathf.Max(0.1f, SliderRow(loc.Get("PANEL_SCALE"), s.Scale, 0.1f, 3f));

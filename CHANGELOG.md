@@ -5,6 +5,7 @@
 - **Release Date**: *Unreleased*
 - **Highlights**: Placeholder
 - **Details**:
+  - Added key-text size and position options to the Key Overlay page: a slider controls the label size (as a fraction of the grid cell), and X/Y number inputs move each label relative to a fixed origin at its key's centre.
 - **Contributors**: Placeholder
 
 ## 1.2.0
