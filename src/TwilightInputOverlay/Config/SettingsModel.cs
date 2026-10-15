@@ -104,6 +104,15 @@ namespace TwilightInputOverlay
         public bool ShowHud = true;
         public bool ShowKeyText = true;
 
+        // Key text: font size as a fraction of one grid cell (0.5 = the classic
+        // size), and the label's offset from the text origin — a fixed point
+        // just above each key's centre (positive X = right, positive Y = up;
+        // see InputHud.TextOriginY). The offsets scale with the HUD like the
+        // other geometry values so the text stays proportionally placed.
+        public float KeyTextSize = 0.5f;
+        public float KeyTextOffsetX = 0f;
+        public float KeyTextOffsetY = 0f;
+
         // Bottom-left anchored HUD placement/scaling.
         public float OffsetX = 16f;
         public float OffsetY = 16f;
@@ -145,8 +154,29 @@ namespace TwilightInputOverlay
         public float TrailResponse = 12f;
         public Color CursorColor = new Color(1f, 1f, 1f, 1f);
 
+        // Raining Keys: bars rise from the top of the first-row keys into a
+        // rectangular region above them (width = first-row width, height =
+        // RainingHeight, its bottom edge sits RainingGap above the key tops).
+        // While a key is held the bar's top extends upward at RainingSpeed;
+        // after release the whole bar keeps translating up until its bottom
+        // passes the region's top edge, then it disappears. All these values
+        // are HUD-space and scale with Scale, like spacing / corner radius.
+        public bool RainingEnabled = false;
+        public int RainingHeight = 160;   // region height (HUD units)
+        public int RainingGap = 0;        // region bottom edge vs key tops (HUD units)
+        public int RainingSpeed = 200;    // flow speed (HUD units / second)
+        public float RainingWidth = 0f;      // 0 = match the key's own width
+        public float RainingRadius = 0f;     // bar corner radius (HUD units); 0 = square
+        public Color RainingColor = new Color(1f, 1f, 1f, 1f);
+
         // Standalone-panel keybind; not shown when integrated into a timer's panel.
         public KeyCode PanelKey = KeyCode.Home;
+
+        // Diagnostics: when on, the Raining Keys overlay logs per-second stats
+        // (bar counts/heights, rounded-rect texture-cache churn, managed memory)
+        // to the BepInEx log. A global preference like the panel key and
+        // language, so it is excluded from preset snapshots.
+        public bool DebugInfo = false;
 
         public string CurrentLang = "en";
 
@@ -320,6 +350,9 @@ namespace TwilightInputOverlay
                 {
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_key_text": ShowKeyText = ParseBool(value, ShowKeyText); break;
+                    case "key_text_size": KeyTextSize = Mathf.Clamp(ParseFloat(value, KeyTextSize), 0.1f, 1.5f); break;
+                    case "key_text_offset_x": KeyTextOffsetX = ParseFloat(value, KeyTextOffsetX); break;
+                    case "key_text_offset_y": KeyTextOffsetY = ParseFloat(value, KeyTextOffsetY); break;
                     case "offset_x": OffsetX = ParseFloat(value, OffsetX); break;
                     case "offset_y": OffsetY = ParseFloat(value, OffsetY); break;
                     case "scale": Scale = Mathf.Max(0.1f, ParseFloat(value, Scale)); break;
@@ -341,8 +374,16 @@ namespace TwilightInputOverlay
                     case "trail_max_stretch": TrailMaxStretch = Mathf.Max(1f, ParseFloat(value, TrailMaxStretch)); break;
                     case "trail_response": TrailResponse = Mathf.Max(0f, ParseFloat(value, TrailResponse)); break;
                     case "cursor_color": CursorColor = ColorUtil.ParseColor(value, CursorColor); break;
+                    case "raining_enabled": RainingEnabled = ParseBool(value, RainingEnabled); break;
+                    case "raining_height": RainingHeight = Mathf.Max(1, ParseInt(value, RainingHeight)); break;
+                    case "raining_gap": RainingGap = Mathf.Max(0, ParseInt(value, RainingGap)); break;
+                    case "raining_speed": RainingSpeed = Mathf.Max(0, ParseInt(value, RainingSpeed)); break;
+                    case "raining_width": RainingWidth = Mathf.Max(0f, ParseFloat(value, RainingWidth)); break;
+                    case "raining_radius": RainingRadius = Mathf.Max(0f, ParseFloat(value, RainingRadius)); break;
+                    case "raining_color": RainingColor = ColorUtil.ParseColor(value, RainingColor); break;
                     case "panel_key": PanelKey = ParseKeyCode(value, PanelKey); break;
                     case "language": CurrentLang = value; break;
+                    case "debug_info": DebugInfo = ParseBool(value, DebugInfo); break;
                     default:
                         Plugin.Logger.LogWarning($"TwilightInputOverlay: settings.ini: unknown key '{key}', ignored.");
                         break;
@@ -416,6 +457,9 @@ namespace TwilightInputOverlay
             {
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_key_text"] = ShowKeyText ? "true" : "false",
+                ["key_text_size"] = KeyTextSize.ToString("0.###", CultureInfo.InvariantCulture),
+                ["key_text_offset_x"] = KeyTextOffsetX.ToString("0.###", CultureInfo.InvariantCulture),
+                ["key_text_offset_y"] = KeyTextOffsetY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["offset_x"] = OffsetX.ToString("0.###", CultureInfo.InvariantCulture),
                 ["offset_y"] = OffsetY.ToString("0.###", CultureInfo.InvariantCulture),
                 ["scale"] = Scale.ToString("0.###", CultureInfo.InvariantCulture),
@@ -437,8 +481,16 @@ namespace TwilightInputOverlay
                 ["trail_max_stretch"] = TrailMaxStretch.ToString("0.###", CultureInfo.InvariantCulture),
                 ["trail_response"] = TrailResponse.ToString("0.###", CultureInfo.InvariantCulture),
                 ["cursor_color"] = ColorUtil.ToHex(CursorColor),
+                ["raining_enabled"] = RainingEnabled ? "true" : "false",
+                ["raining_height"] = RainingHeight.ToString(CultureInfo.InvariantCulture),
+                ["raining_gap"] = RainingGap.ToString(CultureInfo.InvariantCulture),
+                ["raining_speed"] = RainingSpeed.ToString(CultureInfo.InvariantCulture),
+                ["raining_width"] = RainingWidth.ToString("0.###", CultureInfo.InvariantCulture),
+                ["raining_radius"] = RainingRadius.ToString("0.###", CultureInfo.InvariantCulture),
+                ["raining_color"] = ColorUtil.ToHex(RainingColor),
                 ["panel_key"] = PanelKey.ToString(),
                 ["language"] = CurrentLang,
+                ["debug_info"] = DebugInfo ? "true" : "false",
                 ["row_count"] = Rows.Count.ToString(CultureInfo.InvariantCulture),
             };
             if (!fullConfig)
@@ -447,6 +499,7 @@ namespace TwilightInputOverlay
                 // panel hotkey) out, as documented on SaveTo.
                 main.Remove("panel_key");
                 main.Remove("language");
+                main.Remove("debug_info");
             }
             var idle = StyleSection(Idle);
             var pressed = StyleSection(Pressed);

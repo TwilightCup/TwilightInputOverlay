@@ -20,7 +20,14 @@ namespace TwilightInputOverlay
     {
         private GUIStyle _keyStyle;
         private Font _font;
-        private int _appliedFontSize = -1;
+
+        /// <summary>
+        /// The text-offset origin sits this far (in base units, scaled with the
+        /// HUD) above each key's centre, instead of on the centre itself. The
+        /// X/Y offset inputs are relative to that point: at offset (0, 0) the
+        /// label lands where offset (0, 4) used to before the origin moved.
+        /// </summary>
+        private const float TextOriginY = 4f;
 
         // Per-key fade progress keyed by a stable slot: 0 = fully idle,
         // 1 = fully pressed. A single key uses slot id*2; a dual key uses
@@ -41,6 +48,8 @@ namespace TwilightInputOverlay
             {
                 alignment = TextAnchor.MiddleCenter,
                 richText = false,
+                // No padding so CalcSize measures the glyph box only.
+                padding = new RectOffset(),
                 normal = { textColor = Color.white },
             };
         }
@@ -169,7 +178,7 @@ namespace TwilightInputOverlay
             GUI.color = prev;
 
             if (showText && !string.IsNullOrEmpty(e.Label))
-                DrawText(rect, e.Label, style.Text, cell);
+                DrawText(rect, e.Label, style.Text, cell, s.KeyTextOffsetX * s.Scale, s.KeyTextOffsetY * s.Scale);
         }
 
         private void DrawDualKey(KeyEntry e, Rect rect, float cell, float radius, int borderWidth, bool showText)
@@ -199,10 +208,12 @@ namespace TwilightInputOverlay
             {
                 var leftRect = new Rect(rect.x, rect.y, rect.width * 0.5f, rect.height);
                 var rightRect = new Rect(rect.x + rect.width * 0.5f, rect.y, rect.width * 0.5f, rect.height);
+                float ox = s.KeyTextOffsetX * s.Scale;
+                float oy = s.KeyTextOffsetY * s.Scale;
                 if (!string.IsNullOrEmpty(e.Label))
-                    DrawText(leftRect, e.Label, leftStyle.Text, cell);
+                    DrawText(leftRect, e.Label, leftStyle.Text, cell, ox, oy);
                 if (!string.IsNullOrEmpty(e.Label2))
-                    DrawText(rightRect, e.Label2, rightStyle.Text, cell);
+                    DrawText(rightRect, e.Label2, rightStyle.Text, cell, ox, oy);
             }
         }
 
@@ -222,37 +233,61 @@ namespace TwilightInputOverlay
             };
         }
 
-        private void DrawText(Rect rect, string label, Color color, float cell)
+        private void DrawText(Rect keyRect, string label, Color color, float cell, float offsetX, float offsetY)
         {
-            int fontSize = Mathf.Max(8, Mathf.RoundToInt(cell * 0.5f));
-            EnsureFont(fontSize);
+            var s = ConfigService.Instance.Settings;
+            int fontSize = Mathf.Max(8, Mathf.RoundToInt(cell * s.KeyTextSize));
+            EnsureFont();
+            if (_font == null) return;
+
+            // One cached dynamic font, scaled through GUIStyle.fontSize (the same
+            // pattern PanelStyles uses). Recreating the font per size and swapping
+            // it into the style at runtime makes IMGUI's label metrics drift from
+            // the rasterized glyphs — the anchor baseline sinks and the text
+            // width no longer tracks (Unity issue #965589, won't fix).
             _keyStyle.font = _font;
             _keyStyle.fontSize = fontSize;
 
-            // IMGUI's MiddleCenter tends to sit glyphs slightly low; lift the
-            // label a little so it looks vertically centered.
-            Rect textRect = rect;
+            // Measure the label and place its box centred on the key's centre
+            // plus the configured offset. Sizing the rect to the measured content
+            // (instead of relying on MiddleCenter inside the whole key rect)
+            // keeps the anchor at the text's centre at every font size, even when
+            // the text overflows the key.
+            var content = new GUIContent(label);
+            Vector2 size = _keyStyle.CalcSize(content);
+            // Dynamic fonts sit glyphs slightly low within their line box; lift
+            // the box a little (proportional to the size) so it looks centred.
             float lift = Mathf.Max(1f, fontSize * 0.06f);
-            textRect.y -= lift;
+            // Text origin: a fixed point just above the key's centre (the
+            // offset coordinate system's origin was moved there), so at offset
+            // (0, 0) the label sits where offset (0, 4) used to. The anchor —
+            // the label's own centre — is unchanged.
+            float originX = keyRect.center.x;
+            float originY = keyRect.center.y - TextOriginY * s.Scale;
+            var textRect = new Rect(
+                originX + offsetX - size.x * 0.5f,
+                originY - offsetY - size.y * 0.5f - lift,
+                size.x,
+                size.y);
 
             Color prev = GUI.color;
             GUI.color = color;
-            GUI.Label(textRect, label, _keyStyle);
+            GUI.Label(textRect, content, _keyStyle);
             GUI.color = prev;
         }
 
-        private void EnsureFont(int size)
+        private void EnsureFont()
         {
-            if (size <= 0) size = 18;
-            if (_font != null && _appliedFontSize == size) return;
+            if (_font != null) return;
             try
             {
+                // One fixed-size dynamic font; GUIStyle.fontSize scales it for
+                // every label size, so the anchor metrics stay consistent.
                 _font = Font.CreateDynamicFontFromOSFont(new[]
                 {
                     "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
                     "Noto Sans CJK", "Heiti SC", "Arial Unicode MS", "Arial",
-                }, size);
-                _appliedFontSize = size;
+                }, 64);
             }
             catch (System.Exception ex)
             {

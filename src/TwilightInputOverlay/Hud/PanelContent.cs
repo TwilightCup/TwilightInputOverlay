@@ -33,6 +33,7 @@ namespace TwilightInputOverlay
             Root,
             KeyOverlay,
             MouseOverlay,
+            RainingKeys,
             KeyLayout,
         }
 
@@ -119,6 +120,9 @@ namespace TwilightInputOverlay
                 case SubPage.MouseOverlay:
                     DrawMouseOverlayPage(loc, cfg);
                     return;
+                case SubPage.RainingKeys:
+                    DrawRainingKeysPage(loc, cfg);
+                    return;
                 case SubPage.KeyLayout:
                     if (_activeRow >= 0 && _activeRow < s.Rows.Count)
                     {
@@ -149,6 +153,10 @@ namespace TwilightInputOverlay
                 }
             }
 
+            // Diagnostics toggle (plugin-specific, available in both modes).
+            Section(loc.Get("PANEL_DEBUG"));
+            s.DebugInfo = Toggle(loc.Get("SETTINGS_DEBUG_INFO"), s.DebugInfo);
+
             Section(loc.Get("SETTINGS_PRESET"));
             DrawPresetSelector(cfg, loc);
 
@@ -158,6 +166,8 @@ namespace TwilightInputOverlay
                 _subPage = SubPage.KeyOverlay;
             if (GUILayout.Button(loc.Get("TAB_MOUSE_OVERLAY"), PanelStyles.Button))
                 _subPage = SubPage.MouseOverlay;
+            if (GUILayout.Button(loc.Get("TAB_RAINING_KEYS"), PanelStyles.Button))
+                _subPage = SubPage.RainingKeys;
             if (GUILayout.Button(loc.Get("TAB_KEY_LAYOUT"), PanelStyles.Button))
                 _subPage = SubPage.KeyLayout;
         }
@@ -176,6 +186,9 @@ namespace TwilightInputOverlay
             Section(loc.Get("PANEL_HUD"));
             s.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), s.ShowHud);
             s.ShowKeyText = Toggle(loc.Get("SETTINGS_SHOW_KEY_TEXT"), s.ShowKeyText);
+            s.KeyTextSize = Mathf.Clamp(SliderRow(loc.Get("SETTINGS_KEY_TEXT_SIZE"), s.KeyTextSize, 0.1f, 1.5f), 0.1f, 1.5f);
+            s.KeyTextOffsetX = FloatFieldRow(loc.Get("SETTINGS_KEY_TEXT_OFFSET_X"), s.KeyTextOffsetX, "0.##");
+            s.KeyTextOffsetY = FloatFieldRow(loc.Get("SETTINGS_KEY_TEXT_OFFSET_Y"), s.KeyTextOffsetY, "0.##");
             s.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), s.OffsetX, "0.##");
             s.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), s.OffsetY, "0.##");
             s.Scale = Mathf.Max(0.1f, SliderRow(loc.Get("PANEL_SCALE"), s.Scale, 0.1f, 3f));
@@ -227,6 +240,28 @@ namespace TwilightInputOverlay
             s.TrailMaxStretch = Mathf.Max(1f, SliderRow(loc.Get("SETTINGS_TRAIL_STRETCH"), s.TrailMaxStretch, 1f, 4f));
             s.TrailResponse = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_TRAIL_RESPONSE"), s.TrailResponse, 0f, 30f));
             ColorRow(loc, "PANEL_CURSOR_COLOR", s.CursorColor, c => s.CursorColor = c);
+        }
+
+        // ── Sub-page: Raining Keys (bars rising from the first row) ──
+        private static void DrawRainingKeysPage(LocalizationService loc, ConfigService cfg)
+        {
+            var s = cfg.Settings;
+            GUILayout.Space(6);
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), PanelStyles.Button))
+            {
+                _subPage = SubPage.Root;
+                return; // stop rendering the sub-page this frame
+            }
+
+            Section(loc.Get("PANEL_RAINING"));
+            GUILayout.Label(loc.Get("SETTINGS_RAINING_HINT"), PanelStyles.Small);
+            s.RainingEnabled = Toggle(loc.Get("SETTINGS_RAINING_ENABLED"), s.RainingEnabled);
+            s.RainingHeight = IntFieldRow(loc.Get("SETTINGS_RAINING_HEIGHT"), s.RainingHeight, "raining:height", 1, 500);
+            s.RainingGap = IntFieldRow(loc.Get("SETTINGS_RAINING_GAP"), s.RainingGap, "raining:gap", 0, 200);
+            s.RainingSpeed = IntFieldRow(loc.Get("SETTINGS_RAINING_SPEED"), s.RainingSpeed, "raining:speed", 1, 1000);
+            s.RainingWidth = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_RAINING_WIDTH"), s.RainingWidth, "0.##"));
+            s.RainingRadius = Mathf.Max(0f, SliderRow(loc.Get("SETTINGS_RAINING_RADIUS"), s.RainingRadius, 0f, 24f));
+            ColorRow(loc, "PANEL_RAINING_COLOR", s.RainingColor, c => s.RainingColor = c);
         }
 
         // ── Sub-page: Key Layout (the customizable key layout) ──
