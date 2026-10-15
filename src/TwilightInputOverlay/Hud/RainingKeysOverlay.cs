@@ -5,17 +5,20 @@ namespace TwilightInputOverlay
 {
     /// <summary>
     /// "Raining Keys": when a key of the first HUD row (<see cref="SettingsModel.Rows"/>[0],
-    /// the visually top row) is pressed, a bar (rectangle) rises from the top of that key.
-    /// While the key is held, the bar's top edge extends upward at the flow speed; after
-    /// release the whole bar keeps translating upward at the same speed until its bottom
-    /// passes the top edge of the region, then it disappears. Pressing again during the
-    /// release animation spawns another bar that animates independently, so several bars
-    /// can be visible at once.
+    /// the visually top row) is pressed, a bar (rectangle) appears above that key. While
+    /// the key is held, the bar's top edge extends upward at the flow speed; after release
+    /// the whole bar keeps translating upward at the same speed until its bottom passes the
+    /// top edge of the region, then it disappears. Pressing again during the release
+    /// animation spawns another bar that animates independently, so several bars can be
+    /// visible at once.
     /// <para>
     /// Bars are clipped to a rectangular region whose width is the first row's total width,
     /// whose height is <see cref="SettingsModel.RainingHeight"/> and whose bottom edge sits
     /// <see cref="SettingsModel.RainingGap"/> above the key tops; the region itself is not
-    /// drawn. A width-1 dual key spawns one bar per half (each listening to its own keybind),
+    /// drawn. A held bar's bottom edge is pinned at the region's bottom edge (so the gap
+    /// never clips the bottom rounded end cap away — with gap 0 it coincides with the key
+    /// tops); the clip only ever straight-cuts a bar that extends past the region's top.
+    /// A width-1 dual key spawns one bar per half (each listening to its own keybind),
     /// like the per-half pressed style of the HUD keys; a configured fixed width is split in
     /// two, so each half bar is half the width and the two halves stay adjacent with their
     /// seam at the key's centre. A single bar's width defaults to the width of the key it
@@ -34,8 +37,9 @@ namespace TwilightInputOverlay
     {
         /// <summary>
         /// One active bar. Screen/GUI Y grows downward, so "up" is smaller Y.
-        /// While <see cref="Held"/> the bottom edge is pinned at the key's top and only
-        /// the top extends; once the key is released the whole bar translates upward.
+        /// While <see cref="Held"/> the bottom edge is pinned at the region's bottom edge
+        /// (<see cref="SettingsModel.RainingGap"/> above the key tops) and only the top
+        /// extends; once the key is released the whole bar translates upward.
         /// </summary>
         private sealed class Bar
         {
@@ -137,12 +141,12 @@ namespace TwilightInputOverlay
 
                 if (e.Width == 1 && e.Dual)
                 {
-                    Advance(next, SlotOf(e, 0), InputState.IsHeld(e.Key1), rowY, regionTop, speed, dt);
-                    Advance(next, SlotOf(e, 1), InputState.IsHeld(e.Key2), rowY, regionTop, speed, dt);
+                    Advance(next, SlotOf(e, 0), InputState.IsHeld(e.Key1), regionBottom, regionTop, speed, dt);
+                    Advance(next, SlotOf(e, 1), InputState.IsHeld(e.Key2), regionBottom, regionTop, speed, dt);
                 }
                 else
                 {
-                    Advance(next, SlotOf(e, -1), InputState.IsHeld(e.Key1), rowY, regionTop, speed, dt);
+                    Advance(next, SlotOf(e, -1), InputState.IsHeld(e.Key1), regionBottom, regionTop, speed, dt);
                 }
             }
             _rains = next;
@@ -172,9 +176,9 @@ namespace TwilightInputOverlay
             if (_debugTimer < 1f)
                 return;
 
-            // A bar's height is bounded by gap + region height (the held bar is
-            // clamped to the region top); warn if a bar ever exceeds that, which
-            // would mean the clamp stopped working.
+            // A held bar's height is bounded by the region height (bottom pinned at
+            // the region's bottom edge, top clamped to the region top); warn if a bar
+            // ever exceeds that, which would mean the clamp stopped working.
             float bound = regionHeightPx + gapPx + 1f;
             if (_debugMaxBarHeight > bound)
                 Plugin.Logger.LogWarning(string.Format(
@@ -201,18 +205,20 @@ namespace TwilightInputOverlay
         }
 
         private void Advance(Dictionary<int, Rain> next, int slot, bool pressed,
-            float rowY, float regionTop, float speed, float dt)
+            float regionBottom, float regionTop, float speed, float dt)
         {
             Rain rain;
             if (!_rains.TryGetValue(slot, out rain))
                 rain = new Rain();
 
-            // Rising edge: a new bar appears with height 0 at the key's top.
+            // Rising edge: a new bar appears with height 0 at the region's bottom edge
+            // (RainingGap above the key tops). Its bottom stays pinned there while held,
+            // so the bottom rounded end cap is never clipped away by the region.
             if (pressed && !rain.WasPressed)
             {
                 if (rain.Bars.Count >= MaxBarsPerSlot)
                     rain.Bars.RemoveAt(0);
-                rain.Bars.Add(new Bar { TopY = rowY, BottomY = rowY, Held = true });
+                rain.Bars.Add(new Bar { TopY = regionBottom, BottomY = regionBottom, Held = true });
             }
             rain.WasPressed = pressed;
 
